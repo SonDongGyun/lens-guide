@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useWizard } from "@/lib/store";
 import { LENS_TYPES, type LensTypeId } from "@/lib/data";
@@ -14,21 +14,15 @@ const TABS: { id: LensTypeId; short: string }[] = [
   { id: "office", short: "오피스" },
 ];
 
+const SINGLE_TARGETS: { id: "far" | "near"; label: string; sub: string }[] = [
+  { id: "far", label: "원거리용", sub: "운전·TV 등 먼 거리 위주" },
+  { id: "near", label: "근거리용", sub: "책·세밀 작업 위주" },
+];
+
 export function LensTypeScreen() {
   const lensType = useWizard((s) => s.lensType);
   const setLensType = useWizard((s) => s.setLensType);
-  const [gaze, setGaze] = useState(0.5);
-
-  // auto demo: gentle gaze sweep, throttled to ~5fps to avoid
-  // state churn during AnimatePresence transitions
-  useEffect(() => {
-    let frame = 0;
-    const id = setInterval(() => {
-      frame += 1;
-      setGaze(0.5 + 0.45 * Math.sin(frame / 6));
-    }, 200);
-    return () => clearInterval(id);
-  }, [lensType]);
+  const [singleTarget, setSingleTarget] = useState<"far" | "near">("far");
 
   const info = LENS_TYPES[lensType];
 
@@ -39,10 +33,10 @@ export function LensTypeScreen() {
           eyebrow="STEP 3"
           title={
             <>
-              거리별로 <span className="gradient-text">시야가 어떻게</span> 다른지 보세요
+              <span className="gradient-text">생활 장면별로</span> 어떻게 보이는지 비교해보세요
             </>
           }
-          desc="아래 탭을 바꿔보면 같은 장면에서 또렷한 영역이 어떻게 달라지는지 확인할 수 있어요."
+          desc="책·모니터·운전 시야 세 장면에서 각 렌즈가 어디까지 또렷한지 한눈에 보여드려요."
         />
 
         {/* Tabs */}
@@ -72,34 +66,54 @@ export function LensTypeScreen() {
           })}
         </div>
 
+        {/* Single-vision target toggle */}
+        {lensType === "single" && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-4"
+          >
+            <div className="text-xs text-ink-400 font-semibold tracking-wider uppercase mb-2">
+              어떤 거리에 맞춘 단초점인가요?
+            </div>
+            <div className="inline-flex p-1.5 rounded-2xl bg-white border border-ink-100">
+              {SINGLE_TARGETS.map((t) => {
+                const active = singleTarget === t.id;
+                return (
+                  <motion.button
+                    key={t.id}
+                    onClick={() => setSingleTarget(t.id)}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      "relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left",
+                      active ? "text-ink-900" : "text-ink-400"
+                    )}
+                  >
+                    {active && (
+                      <motion.div
+                        layoutId="single-target-tab"
+                        className="absolute inset-0 rounded-xl bg-bg-muted"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative block">{t.label}</span>
+                    <span className="relative block text-[11px] font-medium text-ink-400">
+                      {t.sub}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
+            <div className="text-xs text-ink-400 mt-2 max-w-md">
+              단초점은 한 거리에 맞춰 제작됩니다. 어느 거리용이 우선인지는 매장에서 함께 정해요.
+            </div>
+          </motion.div>
+        )}
+
         <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 mt-6 items-start">
           {/* visual */}
-          <div>
-            <LensTypeVisual lensType={lensType} gaze={gaze} />
-            <div className="mt-4 px-2">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="text-xs text-ink-400 font-semibold tracking-wider uppercase">
-                  시선 이동
-                </div>
-                <div className="text-xs text-ink-300">
-                  슬라이더를 위·아래로 옮겨 직접 비교해보세요
-                </div>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={gaze * 100}
-                onChange={(e) => setGaze(Number(e.target.value) / 100)}
-                className="w-full accent-brand h-2"
-              />
-              <div className="flex justify-between text-xs text-ink-300 mt-1">
-                <span>위 (먼 거리)</span>
-                <span>중간거리</span>
-                <span>아래 (가까움)</span>
-              </div>
-            </div>
-          </div>
+          <LensTypeVisual lensType={lensType} singleTarget={singleTarget} />
 
           {/* info card */}
           <motion.div
@@ -117,11 +131,17 @@ export function LensTypeScreen() {
             </div>
             <p className="mt-3 text-ink-500 leading-relaxed">{info.description}</p>
 
+            {lensType === "office" && (
+              <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900">
+                먼 거리용으로는 맞지 않으니, 운전 등 외부 활동이 잦으면 누진과 비교해보세요.
+              </div>
+            )}
+
             <div className="mt-6 grid grid-cols-3 gap-2">
               {[
-                { k: "near", label: "가까움", emoji: "📖" },
-                { k: "mid", label: "중간", emoji: "💻" },
-                { k: "far", label: "먼 거리", emoji: "🚗" },
+                { k: "near", label: "책 읽기", emoji: "📖" },
+                { k: "mid", label: "모니터", emoji: "💻" },
+                { k: "far", label: "운전·먼 거리", emoji: "🚗" },
               ].map((x) => {
                 const v = (info.zones as Record<string, number>)[x.k];
                 return (
@@ -144,7 +164,7 @@ export function LensTypeScreen() {
                         v ? "text-brand-dark" : "text-ink-300"
                       )}
                     >
-                      {v ? "또렷" : "흐림"}
+                      {v ? "편함" : "흐림"}
                     </div>
                   </div>
                 );

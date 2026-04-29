@@ -72,8 +72,8 @@ export const LENS_TYPES: Record<
   progressive: {
     id: "progressive",
     label: "누진다초점",
-    tagline: "가까움부터 먼 거리까지 한 렌즈에서",
-    description: "한 장의 렌즈에서 가까움 - 중간 - 먼 거리 시야가 자연스럽게 연결됩니다. 노안 초기 또는 다초점 사용에 적합합니다.",
+    tagline: "한 렌즈로 책에서 먼 거리까지",
+    description: "책을 보다 고개를 들면 모니터와 먼 거리까지 한 렌즈 안에서 자연스럽게 이어집니다. 노안 초기 또는 거리 전환이 잦은 사용에 적합합니다.",
     bestFor: "40대 이상, 거리 전환이 잦은 사용자",
     zones: { near: 1, mid: 1, far: 1 },
   },
