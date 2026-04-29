@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "framer-motion";
-import type { IndexId } from "@/lib/data";
+import { INDEXES, type IndexId } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -42,6 +42,8 @@ function computeEdgeMM(prescription: number, thicknessFactor: number): number {
 export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Props) {
   const [view, setView] = useState<View>("oblique");
   const edgeMM = computeEdgeMM(prescription, thicknessFactor);
+  const baselineEdgeMM = computeEdgeMM(prescription, 1.0);
+  const showGhost = thicknessFactor < 1.0;
 
   return (
     <div className="w-full aspect-[16/10] rounded-3xl bg-gradient-to-br from-[#1A2240] via-[#0F1428] to-[#0D1320] shadow-card relative overflow-hidden border border-ink-100">
@@ -66,6 +68,13 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
 
         <CameraRig view={view} />
         <Frame radiusMM={RADIUS_MM} />
+        {showGhost && (
+          <GhostLens
+            edgeMM={baselineEdgeMM}
+            centerMM={CENTER_MM}
+            radiusMM={RADIUS_MM}
+          />
+        )}
         <Lens edgeMM={edgeMM} centerMM={CENTER_MM} radiusMM={RADIUS_MM} />
         <RimHighlight edgeMM={edgeMM} radiusMM={RADIUS_MM} />
       </Canvas>
@@ -102,34 +111,12 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
         {index} · {VIEW_LABELS[view]}
       </div>
 
-      {/* edge thickness HUD */}
-      <motion.div
-        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 text-right z-10"
-        key={`${index}-${prescription.toFixed(2)}`}
-        initial={{ opacity: 0, x: 8 }}
-        animate={{ opacity: 1, x: 0 }}
-      >
-        <div className="text-[9px] sm:text-[11px] uppercase tracking-wider text-white/55 font-semibold">
-          가장자리 두께
-        </div>
-        <div className="text-2xl sm:text-4xl font-bold text-white font-num leading-none mt-0.5 sm:mt-1">
-          {edgeMM.toFixed(1)}
-          <span className="text-xs sm:text-lg text-white/60 font-medium ml-0.5 sm:ml-1">mm</span>
-        </div>
-        <div className="text-[9px] sm:text-[11px] text-white/50 mt-0.5 sm:mt-1">
-          도수 {prescription.toFixed(2)}D 기준
-        </div>
-      </motion.div>
-
-      {/* caption */}
-      <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 right-2.5 sm:right-4 flex items-center justify-between gap-2 sm:gap-3 z-10">
-        <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur text-[9px] sm:text-[11px] text-white/75 font-medium border border-white/10">
-          프레임은 동일, 외곽 두께만 변합니다
-        </div>
-        <div className="hidden sm:block px-3 py-1.5 rounded-full bg-white/10 backdrop-blur text-[11px] text-white/75 font-medium border border-white/10">
-          압축률↑ → 더 얇아짐
-        </div>
-      </div>
+      {/* 4-index comparison strip + ghost legend */}
+      <ComparisonStrip
+        prescription={prescription}
+        currentIndex={index}
+        showGhost={showGhost}
+      />
 
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-white/40 text-[9px] font-medium tracking-wide pointer-events-none">
         * 개념 시뮬레이션 — 정확한 두께는 매장 검안 후 확인됩니다
@@ -231,6 +218,45 @@ function Lens({
   );
 }
 
+// Static wireframe shell sized to the 1.56 baseline edge. The actual
+// (thinner) lens nests inside it, making the compression effect
+// readable at a glance — without animating per change.
+function GhostLens({
+  edgeMM,
+  centerMM,
+  radiusMM,
+}: {
+  edgeMM: number;
+  centerMM: number;
+  radiusMM: number;
+}) {
+  const profileSpec = useMemo(
+    () => buildProfileSpec(centerMM, radiusMM),
+    [centerMM, radiusMM]
+  );
+  const geo = useMemo(() => {
+    const points = specToPoints(profileSpec, edgeMM);
+    return new THREE.LatheGeometry(points, 64);
+  }, [profileSpec, edgeMM]);
+
+  useEffect(() => {
+    return () => {
+      geo.dispose();
+    };
+  }, [geo]);
+
+  return (
+    <mesh geometry={geo} rotation={[Math.PI / 2, 0, 0]} raycast={() => null}>
+      <meshBasicMaterial
+        color="#FFFFFF"
+        wireframe
+        transparent
+        opacity={0.18}
+      />
+    </mesh>
+  );
+}
+
 function RimHighlight({ edgeMM, radiusMM }: { edgeMM: number; radiusMM: number }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const currentEdgeRef = useRef(edgeMM);
@@ -314,4 +340,78 @@ function applyEdgeToGeometry(
     positions.setY(i, item.alpha + item.beta * edgeMM);
   }
   positions.needsUpdate = true;
+}
+
+function ComparisonStrip({
+  prescription,
+  currentIndex,
+  showGhost,
+}: {
+  prescription: number;
+  currentIndex: IndexId;
+  showGhost: boolean;
+}) {
+  const items = INDEXES.map((idx) => ({
+    id: idx.id,
+    edgeMM: computeEdgeMM(prescription, idx.thicknessFactor),
+  }));
+  const maxEdge = Math.max(...items.map((i) => i.edgeMM));
+
+  return (
+    <div className="absolute bottom-4 sm:bottom-5 left-2.5 sm:left-4 right-2.5 sm:right-4 z-10 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
+      <div className="flex items-center justify-between mb-1 sm:mb-1.5 gap-2">
+        <div className="min-w-0 truncate text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-white/55">
+          가장자리 비교 · 도수 {prescription.toFixed(2)}D 기준
+        </div>
+        {showGhost && (
+          <div className="flex items-center gap-1 shrink-0 text-[8px] sm:text-[9px] text-white/55">
+            <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm border border-white/45 bg-white/10" />
+            1.56 기준선
+          </div>
+        )}
+      </div>
+      <div className="space-y-0.5 sm:space-y-1">
+        {items.map((item) => {
+          const active = item.id === currentIndex;
+          const w = (item.edgeMM / maxEdge) * 100;
+          return (
+            <div
+              key={item.id}
+              className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs"
+            >
+              <span
+                className={cn(
+                  "font-bold w-9 sm:w-11 shrink-0 font-num",
+                  active ? "text-white" : "text-white/55"
+                )}
+              >
+                {item.id}
+              </span>
+              <div className="flex-1 h-1.5 sm:h-2 bg-white/8 rounded-full overflow-hidden">
+                <motion.div
+                  className={cn(
+                    "h-full rounded-full",
+                    active
+                      ? "bg-gradient-to-r from-brand to-purple-400"
+                      : "bg-white/30"
+                  )}
+                  initial={false}
+                  animate={{ width: `${w}%` }}
+                  transition={{ type: "spring", stiffness: 200, damping: 24 }}
+                />
+              </div>
+              <span
+                className={cn(
+                  "font-num font-semibold w-11 sm:w-14 text-right shrink-0",
+                  active ? "text-white" : "text-white/55"
+                )}
+              >
+                {item.edgeMM.toFixed(1)}mm
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
