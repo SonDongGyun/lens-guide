@@ -87,6 +87,7 @@ export function LensTypeVisual({ lensType, singleTarget }: Props) {
             >
               <SceneBand id={s.id} />
             </motion.div>
+            <SceneLabel id={s.id} />
             <StatusChip tone={stat.tone} label={stat.label} />
           </div>
         );
@@ -120,14 +121,30 @@ function StatusChip({ tone, label }: SceneStatus) {
       ? "bg-accent-mint text-white"
       : tone === "soft"
         ? "bg-amber-400 text-ink-900"
-        : "bg-white/15 text-white/80";
+        : "bg-white/20 text-white";
   const icon = tone === "clear" ? "✓" : tone === "soft" ? "!" : "✕";
   return (
     <div
-      className={`absolute right-3 bottom-3 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-tight backdrop-blur shadow-soft ${styles}`}
+      className={`absolute right-3 bottom-3 px-3 py-1.5 rounded-full text-[13px] font-bold tracking-tight backdrop-blur shadow-soft ${styles}`}
     >
       <span className="mr-1">{icon}</span>
       {label}
+    </div>
+  );
+}
+
+const SCENE_LABELS: Record<SceneId, { emoji: string; label: string }> = {
+  far: { emoji: "🚗", label: "운전" },
+  mid: { emoji: "💻", label: "모니터" },
+  near: { emoji: "📖", label: "책" },
+};
+
+function SceneLabel({ id }: { id: SceneId }) {
+  const { emoji, label } = SCENE_LABELS[id];
+  return (
+    <div className="absolute left-3 bottom-3 px-2.5 py-1.5 rounded-full bg-black/55 backdrop-blur text-white text-[13px] font-bold tracking-tight flex items-center gap-1.5 shadow-soft">
+      <span className="text-[14px] leading-none">{emoji}</span>
+      <span>{label}</span>
     </div>
   );
 }
@@ -195,50 +212,50 @@ function DrivingScene() {
         <rect x="388" y="166" width="22" height="14" rx="1.5" fill="#FFD24A" />
         <rect x="383" y="186" width="32" height="14" rx="2" fill="#FFD24A" />
         {/* car ahead */}
-        <rect x="362" y="116" width="76" height="24" rx="5" fill="#1B1B1B" />
-        <rect x="364" y="118" width="72" height="9" rx="2" fill="#0E0E0E" />
+        <rect x="346" y="110" width="108" height="34" rx="6" fill="#1B1B1B" />
+        <rect x="349" y="113" width="102" height="13" rx="2" fill="#0E0E0E" />
         {/* tail lights */}
-        <rect x="368" y="131" width="9" height="4" rx="1" fill="#FF2A2A" />
-        <rect x="423" y="131" width="9" height="4" rx="1" fill="#FF2A2A" />
+        <rect x="354" y="129" width="14" height="6" rx="1.5" fill="#FF2A2A" />
+        <rect x="432" y="129" width="14" height="6" rx="1.5" fill="#FF2A2A" />
         {/* license plate */}
-        <rect x="386" y="134" width="28" height="6" rx="0.8" fill="#F2F2F2" />
+        <rect x="378" y="131" width="44" height="11" rx="1" fill="#F2F2F2" />
         <text
           x="400"
-          y="139"
+          y="139.5"
           textAnchor="middle"
-          fontSize="4.2"
+          fontSize="7.5"
           fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
-          fontWeight="700"
+          fontWeight="800"
           fill="#1A1A1A"
-          letterSpacing="-0.2"
+          letterSpacing="-0.3"
         >
           12가 3456
         </text>
         {/* road sign */}
-        <rect x="612" y="74" width="108" height="48" rx="3" fill="#0E5E3D" stroke="#FFFFFF" strokeWidth="1.5" />
+        <rect x="582" y="58" width="148" height="68" rx="4" fill="#0E5E3D" stroke="#FFFFFF" strokeWidth="2" />
         <text
-          x="666"
-          y="96"
+          x="656"
+          y="88"
           textAnchor="middle"
-          fontSize="14"
+          fontSize="22"
           fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
-          fontWeight="700"
+          fontWeight="800"
           fill="#FFFFFF"
         >
           서울
         </text>
         <text
-          x="666"
+          x="656"
           y="114"
           textAnchor="middle"
-          fontSize="10"
+          fontSize="14"
           fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
-          fontWeight="500"
+          fontWeight="600"
           fill="#FFFFFF"
         >
           5 km
         </text>
-        <rect x="663" y="122" width="6" height="22" fill="#6B6B6B" />
+        <rect x="652" y="126" width="8" height="24" fill="#6B6B6B" />
         {/* dashboard hint */}
         <path d="M0,200 Q400,182 800,200 L800,202 L0,202 Z" fill="#070707" opacity="0.85" />
       </svg>
@@ -265,35 +282,35 @@ function MonitorScene() {
             {/* document body */}
             <div className="px-3 pt-2 pb-1">
               {/* heading */}
-              <div className="h-[6px] w-[42%] bg-ink-900/85 rounded-sm" />
-              <div className="h-[2px] w-[28%] bg-ink-900/35 rounded-sm mt-[3px]" />
+              <div className="h-[9px] w-[44%] bg-ink-900/90 rounded-sm" />
+              <div className="h-[3px] w-[30%] bg-ink-900/40 rounded-sm mt-1" />
               {/* paragraph 1 */}
-              <div className="space-y-[2px] mt-2">
+              <div className="space-y-[3px] mt-2.5">
                 {[92, 88, 90, 86, 64].map((w, i) => (
                   <div
                     key={i}
-                    className="h-[1.5px] bg-ink-900/55 rounded"
+                    className="h-[2.5px] bg-ink-900/65 rounded"
                     style={{ width: `${w}%` }}
                   />
                 ))}
               </div>
               {/* table */}
-              <div className="mt-2 grid grid-cols-4 gap-px bg-ink-900/15 p-px rounded-sm">
+              <div className="mt-2.5 grid grid-cols-4 gap-px bg-ink-900/20 p-px rounded-sm">
                 {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="h-[5px] bg-white">
+                  <div key={i} className="h-[8px] bg-white">
                     <div
-                      className="h-[1.5px] mx-1 mt-[1px] bg-ink-900/50 rounded"
+                      className="h-[2.5px] mx-1 mt-[1.5px] bg-ink-900/60 rounded"
                       style={{ width: `${50 + ((i * 17) % 40)}%` }}
                     />
                   </div>
                 ))}
               </div>
               {/* paragraph 2 */}
-              <div className="space-y-[2px] mt-2">
+              <div className="space-y-[3px] mt-2.5">
                 {[88, 80, 56].map((w, i) => (
                   <div
                     key={i}
-                    className="h-[1.5px] bg-ink-900/55 rounded"
+                    className="h-[2.5px] bg-ink-900/65 rounded"
                     style={{ width: `${w}%` }}
                   />
                 ))}
@@ -324,22 +341,22 @@ function BookScene() {
         {/* left page */}
         <div className="relative flex-1 px-4 pt-3 pb-4">
           {/* chapter heading */}
-          <div className="h-[7px] w-[55%] bg-ink-900/85 rounded-sm" />
-          <div className="h-[2px] w-[36%] bg-ink-900/40 rounded-sm mt-[3px]" />
-          <div className="space-y-[3px] mt-3">
+          <div className="h-[10px] w-[55%] bg-ink-900/90 rounded-sm" />
+          <div className="h-[3px] w-[38%] bg-ink-900/45 rounded-sm mt-1" />
+          <div className="space-y-[4px] mt-3">
             {leftLines.map((w, i) =>
               w === 0 ? (
-                <div key={i} className="h-1" />
+                <div key={i} className="h-1.5" />
               ) : (
                 <div
                   key={i}
-                  className="h-[1.5px] bg-ink-900/60 rounded"
+                  className="h-[2.5px] bg-ink-900/65 rounded"
                   style={{ width: `${w}%` }}
                 />
               )
             )}
           </div>
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] font-serif text-ink-900/50 tracking-wider">
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] font-serif text-ink-900/55 tracking-wider">
             42
           </div>
         </div>
@@ -353,20 +370,20 @@ function BookScene() {
         />
         {/* right page */}
         <div className="relative flex-1 px-4 pt-3 pb-4">
-          <div className="space-y-[3px]">
+          <div className="space-y-[4px]">
             {rightLines.map((w, i) =>
               w === 0 ? (
-                <div key={i} className="h-1" />
+                <div key={i} className="h-1.5" />
               ) : (
                 <div
                   key={i}
-                  className="h-[1.5px] bg-ink-900/60 rounded"
+                  className="h-[2.5px] bg-ink-900/65 rounded"
                   style={{ width: `${w}%` }}
                 />
               )
             )}
           </div>
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] font-serif text-ink-900/50 tracking-wider">
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] font-serif text-ink-900/55 tracking-wider">
             43
           </div>
         </div>
