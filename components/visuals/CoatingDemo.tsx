@@ -402,8 +402,9 @@ function AREffect({ after }: EffectProps) {
 
 /* =============================== BLUE LIGHT =============================== */
 
-// Document-editor mockup — real Korean filenames in the sidebar and real
-// prose in the page so it reads like an actual work screen, not a wireframe.
+// Document-editor mockup — sidebar tree + body copy framed as an
+// eye-health column so the page that the lens "filters" is itself
+// teaching the user something about their eyes, not a marketing memo.
 function BlueBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-gradient-to-b from-[#080F1C] via-[#0A1426] to-[#0F1A30]">
@@ -448,18 +449,18 @@ function BlueBackground() {
           <div className="absolute left-0 top-[9%] bottom-0 w-[22%] bg-[#E8ECF2] border-r border-[#D6DCE4] overflow-hidden">
             <div className="px-2 pt-2 flex flex-col gap-[3px] text-[7px] sm:text-[8px] text-ink-600">
               <div className="font-bold text-ink-500 text-[6px] sm:text-[7px] tracking-wider mt-1 mb-0.5 uppercase">
-                내 문서
+                눈 건강 칼럼
               </div>
               {[
-                { name: "📁 2026 기획", indent: 0 },
-                { name: "📄 분기 보고", indent: 1 },
-                { name: "📄 마케팅 전략", indent: 1, active: true },
-                { name: "📁 회의록", indent: 0 },
-                { name: "📄 04.21 주간", indent: 1 },
-                { name: "📄 04.14 주간", indent: 1 },
-                { name: "📁 자료실", indent: 0 },
-                { name: "📄 시장 조사", indent: 1 },
-                { name: "📄 경쟁사 분석", indent: 1 },
+                { name: "📁 디지털 눈 건강", indent: 0 },
+                { name: "📄 디지털 눈 피로", indent: 1, active: true },
+                { name: "📄 20-20-20 규칙", indent: 1 },
+                { name: "📁 일상 관리", indent: 0 },
+                { name: "📄 모니터 거리", indent: 1 },
+                { name: "📄 조명과 눈", indent: 1 },
+                { name: "📁 검진과 자료", indent: 0 },
+                { name: "📄 정기 검진 주기", indent: 1 },
+                { name: "📄 자외선과 눈", indent: 1 },
               ].map((row, i) => (
                 <div
                   key={i}
@@ -479,37 +480,37 @@ function BlueBackground() {
           <div className="absolute left-[24%] right-[3%] top-[11%] bottom-[3%] bg-white rounded-sm shadow-[0_2px_6px_rgba(0,0,0,0.05)] overflow-hidden">
             <div className="px-4 pt-3 pb-2 text-ink-900 leading-tight">
               <div className="text-[10px] sm:text-[12px] font-bold tracking-tight">
-                2026 상반기 마케팅 전략
+                디지털 시대의 눈 피로, 어떻게 줄일까
               </div>
               <div className="text-[6px] sm:text-[7px] text-ink-400 mt-0.5">
-                기획팀 김민수 · 2026.04.28 · 작성 중
+                건강 칼럼 · 2026.04.28 · 안과 가이드
               </div>
 
               <div className="mt-2 text-[7px] sm:text-[8px] font-bold text-ink-800">
-                1. 배경
+                1. 디지털 눈 피로의 정체
               </div>
               <p className="mt-0.5 text-[6px] sm:text-[7px] leading-snug text-ink-700">
-                지난 분기 결과를 바탕으로 상반기 핵심 캠페인 방향을 정리했습니다.
-                디지털 채널 비중을 확대하고, 매장 경험과 자연스럽게 이어지는 옴니
-                흐름을 강화하는 것이 이번 분기의 가장 큰 변화입니다.
+                모니터·휴대폰을 오래 보면 분당 깜빡임 횟수가 평소 18회에서 6회
+                수준으로 줄어 눈물막이 빠르게 마릅니다. 뻑뻑한 안구, 두통,
+                흐릿한 시야가 가장 흔한 신호입니다.
               </p>
 
               <div className="mt-1.5 text-[7px] sm:text-[8px] font-bold text-ink-800">
-                2. 핵심 목표
+                2. 20-20-20 규칙
               </div>
               <ul className="mt-0.5 text-[6px] sm:text-[7px] leading-snug text-ink-700 pl-3 list-disc">
-                <li>신규 가입자 12% 증가</li>
-                <li>매장 방문 전환율 1.5배 상승</li>
-                <li>재구매율 8% 개선</li>
+                <li>20분마다 잠시 멈춥니다</li>
+                <li>약 6m 거리의 사물을 봅니다</li>
+                <li>20초간 천천히 응시합니다</li>
               </ul>
 
               <div className="mt-1.5 text-[7px] sm:text-[8px] font-bold text-ink-800">
-                3. 채널 전략
+                3. 작업 환경 정비
               </div>
               <p className="mt-0.5 text-[6px] sm:text-[7px] leading-snug text-ink-700">
-                디지털 광고 예산을 기존 대비 30% 확대하고, 영상 콘텐츠 비중을
-                단계적으로 늘려갑니다. 오프라인 매장에서는 시즌 컬렉션 체험을
-                중심으로 방문 동기를 강화합니다.
+                모니터 상단을 눈높이 또는 살짝 아래에 두고, 화면까지 50~70cm를
+                유지하세요. 실내 조명은 화면 밝기와 비슷하게 맞추고, 의식적으로
+                자주 깜빡여 눈물막을 보충하는 것이 좋습니다.
               </p>
             </div>
           </div>

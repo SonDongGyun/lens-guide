@@ -275,6 +275,11 @@ function MonitorScene() {
         draggable={false}
         className="absolute inset-0 w-full h-full object-cover select-none"
       />
+      <EyeHealthTip
+        eyebrow="눈 건강 · 모니터"
+        title="20-20-20 규칙"
+        body="20분마다 6m 거리를 20초간 응시"
+      />
     </div>
   );
 }
@@ -288,6 +293,38 @@ function BookScene() {
         draggable={false}
         className="absolute inset-0 w-full h-full object-cover select-none"
       />
+      <EyeHealthTip
+        eyebrow="눈 건강 · 독서"
+        title="30~40cm 독서 거리"
+        body="300lux 이상 밝기, 30분마다 휴식"
+      />
+    </div>
+  );
+}
+
+// Floating tip card sized to fit inside the small scene area without
+// covering the image. Stays readable across whatever underlying image
+// thanks to the dark scrim + backdrop blur.
+function EyeHealthTip({
+  eyebrow,
+  title,
+  body,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="absolute bottom-1 left-1 right-1 sm:bottom-1.5 sm:left-1.5 sm:right-1.5 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-md sm:rounded-lg bg-black/65 backdrop-blur-sm border border-white/10">
+      <div className="text-[7px] sm:text-[9px] font-bold tracking-wider uppercase text-white/55 leading-none">
+        {eyebrow}
+      </div>
+      <div className="text-white text-[9px] sm:text-[11px] font-bold leading-tight mt-0.5">
+        {title}
+      </div>
+      <div className="text-white/75 text-[8px] sm:text-[10px] mt-0.5 leading-tight">
+        {body}
+      </div>
     </div>
   );
 }
