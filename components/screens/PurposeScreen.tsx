@@ -34,7 +34,7 @@ export function PurposeScreen() {
               안경을 주로 <span className="gradient-text">언제</span> 사용하시나요?
             </>
           }
-          desc="해당되는 항목을 모두 골라주세요. 선택할수록 추천이 더 정확해져요."
+          desc="해당되는 항목을 모두 골라주세요. 선택할수록 비교 안내가 더 정확해져요."
         />
 
         <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-3 mt-10">
@@ -70,7 +70,7 @@ export function PurposeScreen() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs text-ink-400 font-semibold tracking-wider uppercase">
-              실시간 추천 키워드
+              관련 옵션 키워드
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <AnimatePresence mode="popLayout">
@@ -82,7 +82,7 @@ export function PurposeScreen() {
                     exit={{ opacity: 0 }}
                     className="text-sm text-ink-300"
                   >
-                    선택 항목에 따라 여기에 추천 키워드가 보여요
+                    선택 항목에 따라 관련 옵션 키워드가 여기에 표시돼요
                   </motion.span>
                 )}
                 {hints.map((h) => (

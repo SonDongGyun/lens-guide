@@ -66,7 +66,7 @@ export function WelcomeScreen() {
             transition={{ delay: 0.45, duration: 0.6 }}
             className="mt-6 text-xl text-ink-500 max-w-xl text-balance"
           >
-            사용 목적과 평소 불편함만 알려주시면, 렌즈 종류 · 두께 · 코팅의 차이를 직접 비교하면서 이해할 수 있어요.
+            사용 목적과 평소 불편함만 알려주시면, 렌즈 종류 · 두께 · 코팅의 차이를 직접 비교해볼 수 있는 인터랙티브 안내예요.
           </motion.p>
 
           <motion.div

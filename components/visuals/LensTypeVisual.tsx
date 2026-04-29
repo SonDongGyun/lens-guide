@@ -96,6 +96,11 @@ export function LensTypeVisual({ lensType, gaze }: Props) {
         {lensType === "progressive" && "누진 — 시선에 따라 변화"}
         {lensType === "office" && "오피스 — 중간/근거리 강화"}
       </div>
+
+      {/* disclaimer */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur text-white/70 text-[10px] font-medium tracking-wide">
+        * 개념 시뮬레이션 — 실제 광학 효과와 다를 수 있습니다
+      </div>
     </div>
   );
 }

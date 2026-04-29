@@ -157,7 +157,7 @@ export function LensTypeScreen() {
 
             <div className="mt-5 p-4 rounded-2xl bg-bg-muted">
               <div className="text-xs uppercase tracking-wider text-ink-400 font-semibold">
-                추천 사용자
+                이런 분께 적합
               </div>
               <div className="mt-1 text-ink-900 font-medium">{info.bestFor}</div>
             </div>

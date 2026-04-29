@@ -6,16 +6,26 @@ import { recommend } from "@/lib/recommendation";
 import { PURPOSES, DISCOMFORTS } from "@/lib/data";
 import { Button } from "@/components/ui/Button";
 import { useEffect, useMemo, useState } from "react";
+import { saveConsultation, makeTicket } from "@/lib/storage";
 
 export function StaffScreen() {
   const purposes = useWizard((s) => s.purposes);
   const discomforts = useWizard((s) => s.discomforts);
   const primaryConcern = useWizard((s) => s.primaryConcern);
   const prescription = useWizard((s) => s.prescription);
+  const lensType = useWizard((s) => s.lensType);
+  const selectedIndex = useWizard((s) => s.selectedIndex);
+  const coatings = useWizard((s) => s.coatings);
+  const storedTicket = useWizard((s) => s.ticket);
+  const setTicket = useWizard((s) => s.setTicket);
   const reset = useWizard((s) => s.reset);
 
-  const [ticket] = useState(() => Math.floor(100 + Math.random() * 900));
+  const [ticket] = useState(() => storedTicket ?? makeTicket());
   const [seconds, setSeconds] = useState(60);
+
+  useEffect(() => {
+    if (!storedTicket) setTicket(ticket);
+  }, [storedTicket, setTicket, ticket]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -28,6 +38,23 @@ export function StaffScreen() {
     () => recommend({ purposes, discomforts, primaryConcern, prescription }),
     [purposes, discomforts, primaryConcern, prescription]
   );
+
+  // persist completed consultation once on mount
+  useEffect(() => {
+    saveConsultation({
+      ticket,
+      createdAt: new Date().toISOString(),
+      purposes,
+      discomforts,
+      primaryConcern,
+      prescription,
+      lensType,
+      selectedIndex,
+      coatings,
+      brief: rec.brief,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="absolute inset-0 grid place-items-center px-10 py-10">
@@ -98,13 +125,16 @@ export function StaffScreen() {
                 <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">
                   상담 번호
                 </div>
-                <div className="mt-1 font-num text-4xl font-bold text-ink-900 tracking-tight">
-                  #{ticket}
+                <div className="mt-1 font-num text-2xl font-bold text-ink-900 tracking-tight">
+                  #{ticket.split("-").slice(-1)[0]}
+                </div>
+                <div className="text-[10px] text-ink-300 font-num tracking-wider mt-0.5">
+                  {ticket}
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">
-                  추천 구성
+                  비교 안내 구성
                 </div>
                 <div className="mt-1 text-base font-bold text-ink-900">
                   {rec.brief}
@@ -196,7 +226,7 @@ function buildBrief({
   const parts = [
     purposeLabels && `사용 패턴: ${purposeLabels}`,
     concern && `주요 고민: ${concern}`,
-    `추천: ${rec.brief}`,
+    `안내: ${rec.brief}`,
   ].filter(Boolean);
 
   return parts.join(" · ");

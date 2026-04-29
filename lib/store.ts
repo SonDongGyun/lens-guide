@@ -33,6 +33,7 @@ export const SCREEN_ORDER: ScreenId[] = [
 interface WizardState {
   screen: ScreenId;
   direction: 1 | -1;
+  ticket: string | null;
   purposes: PurposeId[];
   discomforts: DiscomfortId[];
   primaryConcern: DiscomfortId | null;
@@ -50,12 +51,14 @@ interface WizardState {
   setIndex: (i: IndexId) => void;
   setPrescription: (n: number) => void;
   toggleCoating: (id: CoatingId) => void;
+  setTicket: (t: string) => void;
   reset: () => void;
 }
 
 const initialState = {
   screen: "welcome" as ScreenId,
   direction: 1 as 1 | -1,
+  ticket: null as string | null,
   purposes: [] as PurposeId[],
   discomforts: [] as DiscomfortId[],
   primaryConcern: null as DiscomfortId | null,
@@ -107,5 +110,6 @@ export const useWizard = create<WizardState>((set, get) => ({
     const cur = get().coatings;
     set({ coatings: cur.includes(id) ? cur.filter((c) => c !== id) : [...cur, id] });
   },
+  setTicket: (t) => set({ ticket: t }),
   reset: () => set({ ...initialState }),
 }));

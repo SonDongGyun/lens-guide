@@ -120,6 +120,11 @@ export function ThicknessVisual({ index, thicknessFactor, prescription }: Props)
           압축률↑ → 더 얇아짐
         </div>
       </div>
+
+      {/* disclaimer */}
+      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-ink-900/80 backdrop-blur text-white/80 text-[10px] font-medium tracking-wide">
+        * 개념 시뮬레이션 — 정확한 두께는 매장 검안 후 확인됩니다
+      </div>
     </div>
   );
 }

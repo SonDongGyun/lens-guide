@@ -1,8 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
 import { useWizard, type ScreenId } from "@/lib/store";
+import { useKioskGuards } from "@/lib/useKioskGuards";
 import { KioskFrame } from "@/components/ui/KioskFrame";
 import { WelcomeScreen } from "@/components/screens/WelcomeScreen";
 import { PurposeScreen } from "@/components/screens/PurposeScreen";
@@ -25,20 +25,14 @@ const SCREENS: Record<ScreenId, React.ComponentType> = {
 };
 
 export default function Page() {
+  useKioskGuards();
+
   const screen = useWizard((s) => s.screen);
   const direction = useWizard((s) => s.direction);
   const next = useWizard((s) => s.next);
   const prev = useWizard((s) => s.prev);
   const purposes = useWizard((s) => s.purposes);
   const discomforts = useWizard((s) => s.discomforts);
-  const reset = useWizard((s) => s.reset);
-
-  // Auto-reset back to welcome after staying on staff for a while (kiosk style)
-  useEffect(() => {
-    if (screen !== "staff") return;
-    const id = setTimeout(() => reset(), 1000 * 60 * 2);
-    return () => clearTimeout(id);
-  }, [screen, reset]);
 
   const ActiveScreen = SCREENS[screen];
 

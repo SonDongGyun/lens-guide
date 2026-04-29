@@ -37,7 +37,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Pretendard", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-pretendard)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       fontSize: {
         "display-xl": ["80px", { lineHeight: "1.1", letterSpacing: "-0.04em", fontWeight: "700" }],

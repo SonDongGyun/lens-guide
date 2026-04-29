@@ -28,10 +28,10 @@ export function ResultScreen() {
           eyebrow="MY LENS"
           title={
             <>
-              고객님께 맞는 <span className="gradient-text">렌즈 비교 결과</span>예요
+              입력하신 내용 기반 <span className="gradient-text">렌즈 비교 안내</span>
             </>
           }
-          desc="입력해주신 내용을 정리했습니다. 직원에게 보여주시면 바로 이어서 상담해드려요."
+          desc="선택값을 정리한 참고용 안내입니다. 정확한 처방과 상담은 직원이 이어서 도와드려요."
         />
 
         {/* hero recommendation card */}
@@ -57,7 +57,7 @@ export function ResultScreen() {
             <div className="flex items-center justify-between gap-6 flex-wrap">
               <div>
                 <div className="text-xs font-bold tracking-wider uppercase text-white/70">
-                  추천 구성
+                  비교 안내 구성
                 </div>
                 <div className="mt-1 text-3xl lg:text-4xl font-bold tracking-tight">
                   {rec.brief}
@@ -108,10 +108,10 @@ export function ResultScreen() {
             </div>
             <div>
               <div className="text-xs uppercase tracking-wider text-ink-400 font-semibold">
-                추천 이유
+                이렇게 정리한 이유
               </div>
               <div className="text-lg font-bold text-ink-900">
-                고객님 입력을 토대로 이렇게 정리했어요
+                고객님 선택을 토대로 안내드린 근거예요
               </div>
             </div>
           </div>
@@ -154,6 +154,11 @@ export function ResultScreen() {
               }
             />
           </SummaryCard>
+        </div>
+
+        {/* disclaimer */}
+        <div className="mt-6 p-4 rounded-2xl bg-bg-muted text-xs text-ink-400 leading-relaxed">
+          * 본 안내는 룰 기반 비교 도구로, 입력하신 선택을 정리해 보여드리는 참고용 자료입니다. 시력 검사를 대체하지 않으며, 실제 처방·렌즈 결정은 매장 검안과 직원 상담 후 이루어집니다.
         </div>
       </div>
     </div>
