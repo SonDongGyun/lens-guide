@@ -1,0 +1,115 @@
+"use client";
+
+import { motion, AnimatePresence } from "framer-motion";
+import { useWizard } from "@/lib/store";
+import { PURPOSES } from "@/lib/data";
+import { SectionTitle } from "@/components/ui/ScreenShell";
+import { SelectCard } from "@/components/ui/SelectCard";
+
+const KEYWORD_HINTS: Record<string, string[]> = {
+  screen: ["블루라이트", "비반사"],
+  driving: ["비반사", "변색"],
+  reading: ["근거리 시야", "오피스"],
+  indoor_outdoor: ["변색"],
+  outdoor: ["변색", "발수·방오"],
+  lightweight: ["고굴절(1.67↑)"],
+  progressive_curious: ["누진다초점"],
+};
+
+export function PurposeScreen() {
+  const purposes = useWizard((s) => s.purposes);
+  const togglePurpose = useWizard((s) => s.togglePurpose);
+
+  const hints = Array.from(
+    new Set(purposes.flatMap((p) => KEYWORD_HINTS[p] ?? []))
+  );
+
+  return (
+    <div className="h-full overflow-y-auto px-10 lg:px-20 pb-10">
+      <div className="max-w-6xl mx-auto pt-4">
+        <SectionTitle
+          eyebrow="STEP 1"
+          title={
+            <>
+              안경을 주로 <span className="gradient-text">언제</span> 사용하시나요?
+            </>
+          }
+          desc="해당되는 항목을 모두 골라주세요. 선택할수록 추천이 더 정확해져요."
+        />
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-3 mt-10">
+          {PURPOSES.map((p, i) => (
+            <SelectCard
+              key={p.id}
+              index={i}
+              selected={purposes.includes(p.id)}
+              onClick={() => togglePurpose(p.id)}
+              emoji={p.emoji}
+              label={p.label}
+              desc={p.desc}
+            />
+          ))}
+        </div>
+
+        {/* live recommendation hints */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: hints.length ? 1 : 0.5 }}
+          className="mt-8 p-5 rounded-3xl bg-white border border-ink-50 shadow-soft flex items-center gap-4"
+        >
+          <div className="shrink-0 w-10 h-10 rounded-2xl bg-brand-soft text-brand grid place-items-center">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M10 2v2m0 12v2M2 10h2m12 0h2M4.2 4.2l1.4 1.4m8.8 8.8l1.4 1.4M4.2 15.8l1.4-1.4m8.8-8.8l1.4-1.4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-ink-400 font-semibold tracking-wider uppercase">
+              실시간 추천 키워드
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <AnimatePresence mode="popLayout">
+                {hints.length === 0 && (
+                  <motion.span
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm text-ink-300"
+                  >
+                    선택 항목에 따라 여기에 추천 키워드가 보여요
+                  </motion.span>
+                )}
+                {hints.map((h) => (
+                  <motion.span
+                    key={h}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 22 }}
+                    className="px-3 py-1.5 rounded-full bg-brand-soft text-brand-dark font-semibold text-sm"
+                  >
+                    {h}
+                  </motion.span>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-xs text-ink-300 uppercase tracking-wider">선택</div>
+            <div className="text-xl font-bold text-ink-900 font-num">
+              {purposes.length}
+              <span className="text-ink-300 text-base font-medium"> / {PURPOSES.length}</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
