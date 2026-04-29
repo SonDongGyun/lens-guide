@@ -42,7 +42,7 @@ export function WelcomeScreen() {
   return (
     <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-2">
       {/* Left: copy */}
-      <div className="relative flex flex-col justify-between px-12 py-12 lg:py-16 lg:pl-20 lg:pr-10 z-10">
+      <div className="relative flex flex-col justify-between px-5 sm:px-8 py-10 sm:py-12 lg:py-16 lg:pl-20 lg:pr-10 z-10">
         <div>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -158,7 +158,7 @@ export function WelcomeScreen() {
       </div>
 
       {/* Right: hero visual */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden hidden lg:block">
         <HeroLens />
       </div>
     </div>

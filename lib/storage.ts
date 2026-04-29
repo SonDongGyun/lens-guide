@@ -19,6 +19,7 @@ export interface ConsultationRecord {
   selectedIndex: IndexId;
   coatings: CoatingId[];
   brief: string;
+  demoSingleTarget?: "far" | "near";
 }
 
 const STORAGE_KEY = "lens-guide:consultations";

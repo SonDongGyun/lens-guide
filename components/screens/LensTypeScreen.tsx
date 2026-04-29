@@ -37,7 +37,7 @@ export function LensTypeScreen() {
   }, [lensType, singleTarget, info.zones]);
 
   return (
-    <div className="h-full overflow-y-auto px-10 lg:px-20 pb-10">
+    <div className="h-full overflow-y-auto px-5 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-7xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 3"
@@ -131,7 +131,7 @@ export function LensTypeScreen() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="p-7 rounded-3xl bg-white border border-ink-50 shadow-card"
+            className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-card"
           >
             <div className="text-sm text-brand font-bold tracking-wider uppercase">
               {info.label}

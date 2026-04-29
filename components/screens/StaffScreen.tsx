@@ -16,6 +16,7 @@ export function StaffScreen() {
   const lensType = useWizard((s) => s.lensType);
   const selectedIndex = useWizard((s) => s.selectedIndex);
   const coatings = useWizard((s) => s.coatings);
+  const singleTarget = useWizard((s) => s.singleTarget);
   const storedTicket = useWizard((s) => s.ticket);
   const setTicket = useWizard((s) => s.setTicket);
   const reset = useWizard((s) => s.reset);
@@ -44,21 +45,22 @@ export function StaffScreen() {
       selectedIndex,
       coatings,
       brief,
+      demoSingleTarget: singleTarget,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div className="absolute inset-0 grid place-items-center px-10 py-10">
+    <div className="absolute inset-0 grid place-items-center px-5 sm:px-8 py-6 sm:py-10 overflow-y-auto">
       <div className="w-full max-w-3xl">
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 24 }}
-          className="rounded-[40px] bg-white shadow-elevated overflow-hidden border border-ink-50"
+          className="rounded-3xl sm:rounded-[40px] bg-white shadow-elevated overflow-hidden border border-ink-50"
         >
           {/* check */}
-          <div className="relative px-10 pt-12 pb-8 text-center">
+          <div className="relative px-5 sm:px-10 pt-10 sm:pt-12 pb-6 sm:pb-8 text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -106,13 +108,13 @@ export function StaffScreen() {
 
           {/* ticket */}
           <div
-            className="relative px-10 py-8 border-y border-dashed border-ink-100"
+            className="relative px-5 sm:px-10 py-6 sm:py-8 border-y border-dashed border-ink-100"
             style={{
               background:
                 "repeating-linear-gradient(45deg, transparent 0 12px, rgba(49,130,246,0.03) 12px 24px)",
             }}
           >
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 sm:items-center">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">
                   상담 번호
@@ -124,7 +126,7 @@ export function StaffScreen() {
                   {ticket}
                 </div>
               </div>
-              <div className="text-center col-span-2">
+              <div className="text-center sm:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">
                   내가 고른 구성
                 </div>
@@ -136,7 +138,7 @@ export function StaffScreen() {
           </div>
 
           {/* staff brief */}
-          <div className="px-10 py-7">
+          <div className="px-5 sm:px-10 py-6 sm:py-7">
             <div className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-2">
               직원용 한 줄 브리프
             </div>

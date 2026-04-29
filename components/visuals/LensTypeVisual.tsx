@@ -133,7 +133,7 @@ function StatusChip({ tone, label }: SceneStatus) {
   const icon = tone === "clear" ? "✓" : tone === "soft" ? "!" : "✕";
   return (
     <div
-      className={`absolute right-3 bottom-3 px-3 py-1.5 rounded-full text-[13px] font-bold tracking-tight backdrop-blur shadow-soft ${styles}`}
+      className={`absolute right-2 bottom-2 sm:right-3 sm:bottom-3 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-[13px] font-bold tracking-tight backdrop-blur shadow-soft ${styles}`}
     >
       <span className="mr-1">{icon}</span>
       {label}
@@ -150,8 +150,8 @@ const SCENE_LABELS: Record<SceneId, { emoji: string; label: string }> = {
 function SceneLabel({ id }: { id: SceneId }) {
   const { emoji, label } = SCENE_LABELS[id];
   return (
-    <div className="absolute left-3 bottom-3 px-2.5 py-1.5 rounded-full bg-black/55 backdrop-blur text-white text-[13px] font-bold tracking-tight flex items-center gap-1.5 shadow-soft">
-      <span className="text-[14px] leading-none">{emoji}</span>
+    <div className="absolute left-2 top-2 sm:left-3 sm:top-auto sm:bottom-3 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-black/55 backdrop-blur text-white text-[11px] sm:text-[13px] font-bold tracking-tight flex items-center gap-1 sm:gap-1.5 shadow-soft">
+      <span className="text-[12px] sm:text-[14px] leading-none">{emoji}</span>
       <span>{label}</span>
     </div>
   );
