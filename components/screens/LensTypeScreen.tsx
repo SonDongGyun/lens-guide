@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useWizard } from "@/lib/store";
 import { LENS_TYPES, type LensTypeId } from "@/lib/data";
@@ -22,9 +22,19 @@ const SINGLE_TARGETS: { id: "far" | "near"; label: string; sub: string }[] = [
 export function LensTypeScreen() {
   const lensType = useWizard((s) => s.lensType);
   const setLensType = useWizard((s) => s.setLensType);
-  const [singleTarget, setSingleTarget] = useState<"far" | "near">("far");
+  const singleTarget = useWizard((s) => s.singleTarget);
+  const setSingleTarget = useWizard((s) => s.setSingleTarget);
 
   const info = LENS_TYPES[lensType];
+
+  const effectiveZones = useMemo(() => {
+    if (lensType === "single") {
+      return singleTarget === "near"
+        ? { near: 1, mid: 0, far: 0 }
+        : { near: 0, mid: 0, far: 1 };
+    }
+    return info.zones;
+  }, [lensType, singleTarget, info.zones]);
 
   return (
     <div className="h-full overflow-y-auto px-10 lg:px-20 pb-10">
@@ -143,7 +153,7 @@ export function LensTypeScreen() {
                 { k: "mid", label: "모니터", emoji: "💻" },
                 { k: "far", label: "운전·먼 거리", emoji: "🚗" },
               ].map((x) => {
-                const v = (info.zones as Record<string, number>)[x.k];
+                const v = (effectiveZones as Record<string, number>)[x.k];
                 return (
                   <div
                     key={x.k}

@@ -71,8 +71,10 @@ export function LensTypeVisual({ lensType, singleTarget }: Props) {
 
       {SCENES.map((s, i) => {
         const stat = status[s.id];
-        const blur = stat.tone === "clear" ? 0 : 9;
-        const opacity = stat.tone === "clear" ? 1 : 0.65;
+        const blur =
+          stat.tone === "clear" ? 0 : stat.tone === "soft" ? 5 : 9;
+        const opacity =
+          stat.tone === "clear" ? 1 : stat.tone === "soft" ? 0.85 : 0.65;
         return (
           <div
             key={s.id}
@@ -87,6 +89,12 @@ export function LensTypeVisual({ lensType, singleTarget }: Props) {
             >
               <SceneBand id={s.id} />
             </motion.div>
+            {stat.tone === "soft" && (
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none bg-amber-300/15 mix-blend-screen"
+              />
+            )}
             <SceneLabel id={s.id} />
             <StatusChip tone={stat.tone} label={stat.label} />
           </div>

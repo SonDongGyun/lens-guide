@@ -30,6 +30,8 @@ export const SCREEN_ORDER: ScreenId[] = [
   "staff",
 ];
 
+export type SingleTarget = "far" | "near";
+
 interface WizardState {
   screen: ScreenId;
   direction: 1 | -1;
@@ -38,6 +40,7 @@ interface WizardState {
   discomforts: DiscomfortId[];
   primaryConcern: DiscomfortId | null;
   lensType: LensTypeId;
+  singleTarget: SingleTarget;
   selectedIndex: IndexId;
   prescription: number; // diopter, e.g. -4
   coatings: CoatingId[];
@@ -48,6 +51,7 @@ interface WizardState {
   toggleDiscomfort: (id: DiscomfortId) => void;
   setPrimaryConcern: (id: DiscomfortId) => void;
   setLensType: (t: LensTypeId) => void;
+  setSingleTarget: (t: SingleTarget) => void;
   setIndex: (i: IndexId) => void;
   setPrescription: (n: number) => void;
   toggleCoating: (id: CoatingId) => void;
@@ -63,6 +67,7 @@ const initialState = {
   discomforts: [] as DiscomfortId[],
   primaryConcern: null as DiscomfortId | null,
   lensType: "single" as LensTypeId,
+  singleTarget: "far" as SingleTarget,
   selectedIndex: "1.60" as IndexId,
   prescription: -4,
   coatings: [] as CoatingId[],
@@ -104,6 +109,7 @@ export const useWizard = create<WizardState>((set, get) => ({
   },
   setPrimaryConcern: (id) => set({ primaryConcern: id }),
   setLensType: (t) => set({ lensType: t }),
+  setSingleTarget: (t) => set({ singleTarget: t }),
   setIndex: (i) => set({ selectedIndex: i }),
   setPrescription: (n) => set({ prescription: n }),
   toggleCoating: (id) => {
