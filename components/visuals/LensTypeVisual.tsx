@@ -144,75 +144,232 @@ function ProgressiveFlow() {
 }
 
 function SceneBand({ id }: { id: SceneId }) {
-  if (id === "far") {
-    return (
-      <div className="w-full h-full relative flex items-center justify-center">
-        <svg viewBox="0 0 800 200" className="w-[80%] h-full opacity-90">
-          <defs>
-            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#1B3A6B" />
-              <stop offset="1" stopColor="#2C5BA8" />
-            </linearGradient>
-          </defs>
-          <rect width="800" height="200" fill="url(#sky)" />
-          <polygon points="350,200 450,200 520,80 280,80" fill="#222" />
-          <rect x="395" y="100" width="10" height="14" rx="2" fill="#FBBF24" />
-          <rect x="392" y="130" width="16" height="20" rx="2" fill="#FBBF24" />
-          <rect x="388" y="170" width="24" height="28" rx="2" fill="#FBBF24" />
-          <circle cx="380" cy="92" r="3" fill="#FFE08A" />
-          <circle cx="420" cy="92" r="3" fill="#FFE08A" />
-        </svg>
-        <div className="absolute left-6 top-4 text-white/60 text-xs font-medium">
-          🚗 운전·먼 거리
-        </div>
-      </div>
-    );
-  }
-  if (id === "mid") {
-    return (
-      <div className="w-full h-full relative flex items-center justify-center">
-        <div className="relative w-[60%] h-[78%] rounded-xl border-2 border-white/20 bg-gradient-to-b from-white/15 to-white/5 overflow-hidden">
-          <div className="absolute inset-2 grid grid-cols-3 gap-1.5">
-            <div className="bg-white/40 rounded" />
-            <div className="bg-white/30 rounded col-span-2" />
-            <div className="bg-white/25 rounded col-span-3 h-2" />
-            <div className="bg-white/20 rounded col-span-3" />
-            <div className="bg-white/35 rounded" />
-            <div className="bg-white/20 rounded col-span-2" />
-          </div>
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/30 rounded-b" />
-        </div>
-        <div className="absolute left-6 top-4 text-white/60 text-xs font-medium">
-          💻 컴퓨터·중간거리
-        </div>
-      </div>
-    );
-  }
+  if (id === "far") return <DrivingScene />;
+  if (id === "mid") return <MonitorScene />;
+  return <BookScene />;
+}
+
+function DrivingScene() {
+  return (
+    <div className="w-full h-full relative">
+      <svg
+        viewBox="0 0 800 200"
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute inset-0 w-full h-full"
+      >
+        <defs>
+          <linearGradient id="dr-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#0F1F3D" />
+            <stop offset="0.55" stopColor="#1F4685" />
+            <stop offset="1" stopColor="#5680B8" />
+          </linearGradient>
+          <linearGradient id="dr-road" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#2A2A2A" />
+            <stop offset="1" stopColor="#0E0E0E" />
+          </linearGradient>
+        </defs>
+        {/* sky */}
+        <rect x="0" y="0" width="800" height="120" fill="url(#dr-sky)" />
+        {/* horizon glow */}
+        <ellipse cx="400" cy="118" rx="520" ry="22" fill="#83A5D8" opacity="0.45" />
+        {/* distant city silhouette */}
+        <path
+          d="M0,118 L40,118 L48,108 L82,108 L92,114 L138,114 L150,100 L188,100 L200,110 L246,110 L254,118 L800,118 L800,120 L0,120 Z"
+          fill="#0A1628"
+          opacity="0.9"
+        />
+        {/* trees */}
+        <polygon points="20,118 6,160 34,160" fill="#08182E" />
+        <polygon points="60,108 44,158 76,158" fill="#0E2238" />
+        <polygon points="780,108 766,158 794,158" fill="#08182E" />
+        <polygon points="730,118 720,160 740,160" fill="#0E2238" />
+        {/* road */}
+        <polygon points="0,200 800,200 528,118 272,118" fill="url(#dr-road)" />
+        {/* shoulder lines (perspective) */}
+        <line x1="272" y1="118" x2="0" y2="200" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.5" />
+        <line x1="528" y1="118" x2="800" y2="200" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.5" />
+        {/* center lane markings */}
+        <rect x="397" y="124" width="6" height="4" rx="0.5" fill="#FFD24A" />
+        <rect x="395" y="134" width="10" height="6" rx="1" fill="#FFD24A" />
+        <rect x="392" y="148" width="16" height="10" rx="1" fill="#FFD24A" />
+        <rect x="388" y="166" width="22" height="14" rx="1.5" fill="#FFD24A" />
+        <rect x="383" y="186" width="32" height="14" rx="2" fill="#FFD24A" />
+        {/* car ahead */}
+        <rect x="362" y="116" width="76" height="24" rx="5" fill="#1B1B1B" />
+        <rect x="364" y="118" width="72" height="9" rx="2" fill="#0E0E0E" />
+        {/* tail lights */}
+        <rect x="368" y="131" width="9" height="4" rx="1" fill="#FF2A2A" />
+        <rect x="423" y="131" width="9" height="4" rx="1" fill="#FF2A2A" />
+        {/* license plate */}
+        <rect x="386" y="134" width="28" height="6" rx="0.8" fill="#F2F2F2" />
+        <text
+          x="400"
+          y="139"
+          textAnchor="middle"
+          fontSize="4.2"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fontWeight="700"
+          fill="#1A1A1A"
+          letterSpacing="-0.2"
+        >
+          12가 3456
+        </text>
+        {/* road sign */}
+        <rect x="612" y="74" width="108" height="48" rx="3" fill="#0E5E3D" stroke="#FFFFFF" strokeWidth="1.5" />
+        <text
+          x="666"
+          y="96"
+          textAnchor="middle"
+          fontSize="14"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fontWeight="700"
+          fill="#FFFFFF"
+        >
+          서울
+        </text>
+        <text
+          x="666"
+          y="114"
+          textAnchor="middle"
+          fontSize="10"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fontWeight="500"
+          fill="#FFFFFF"
+        >
+          5 km
+        </text>
+        <rect x="663" y="122" width="6" height="22" fill="#6B6B6B" />
+        {/* dashboard hint */}
+        <path d="M0,200 Q400,182 800,200 L800,202 L0,202 Z" fill="#070707" opacity="0.85" />
+      </svg>
+    </div>
+  );
+}
+
+function MonitorScene() {
   return (
     <div className="w-full h-full relative flex items-center justify-center">
-      <div className="relative w-[70%] h-[80%] rounded-md bg-gradient-to-b from-white/85 to-white/70 shadow-2xl flex">
-        <div className="flex-1 m-3 space-y-1.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-1.5 bg-ink-700/40 rounded"
-              style={{ width: `${85 - (i % 3) * 10}%` }}
-            />
-          ))}
+      <div className="relative w-[72%] h-[88%]">
+        {/* monitor frame */}
+        <div className="absolute inset-0 rounded-[10px] bg-gradient-to-b from-[#2C2C2C] to-[#141414] p-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+          {/* screen */}
+          <div className="relative w-full h-full rounded-[7px] bg-gradient-to-br from-[#FBFBFB] to-[#E5E7EB] overflow-hidden">
+            {/* window chrome */}
+            <div className="flex items-center gap-1 px-2 py-1 bg-[#E1E2E6] border-b border-black/5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#FF5F57]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#FEBC2E]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#28C840]" />
+              <div className="ml-2 flex-1 h-1.5 bg-white/85 rounded-sm" />
+              <div className="w-3 h-1.5 bg-white/60 rounded-sm" />
+            </div>
+            {/* document body */}
+            <div className="px-3 pt-2 pb-1">
+              {/* heading */}
+              <div className="h-[6px] w-[42%] bg-ink-900/85 rounded-sm" />
+              <div className="h-[2px] w-[28%] bg-ink-900/35 rounded-sm mt-[3px]" />
+              {/* paragraph 1 */}
+              <div className="space-y-[2px] mt-2">
+                {[92, 88, 90, 86, 64].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-[1.5px] bg-ink-900/55 rounded"
+                    style={{ width: `${w}%` }}
+                  />
+                ))}
+              </div>
+              {/* table */}
+              <div className="mt-2 grid grid-cols-4 gap-px bg-ink-900/15 p-px rounded-sm">
+                {Array.from({ length: 16 }).map((_, i) => (
+                  <div key={i} className="h-[5px] bg-white">
+                    <div
+                      className="h-[1.5px] mx-1 mt-[1px] bg-ink-900/50 rounded"
+                      style={{ width: `${50 + ((i * 17) % 40)}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+              {/* paragraph 2 */}
+              <div className="space-y-[2px] mt-2">
+                {[88, 80, 56].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-[1.5px] bg-ink-900/55 rounded"
+                    style={{ width: `${w}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="w-px bg-ink-700/20" />
-        <div className="flex-1 m-3 space-y-1.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-1.5 bg-ink-700/40 rounded"
-              style={{ width: `${80 - (i % 3) * 12}%` }}
-            />
-          ))}
-        </div>
+        {/* monitor stand */}
+        <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-[32%] h-[4px] bg-gradient-to-b from-[#1F1F1F] to-[#0A0A0A] rounded-b-[2px]" />
+        <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-[40%] h-[2px] bg-[#0A0A0A] rounded-full" />
       </div>
-      <div className="absolute left-6 top-4 text-white/60 text-xs font-medium">
-        📖 책·가까움
+    </div>
+  );
+}
+
+function BookScene() {
+  const leftLines = [88, 92, 86, 90, 75, 88, 0, 82, 90, 86, 72];
+  const rightLines = [88, 90, 86, 92, 75, 90, 84, 80, 0, 88, 76, 90, 64];
+  return (
+    <div className="w-full h-full relative flex items-center justify-center">
+      <div
+        className="relative w-[78%] h-[88%] flex shadow-[0_10px_32px_rgba(0,0,0,0.45)] rounded-[3px] overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(180deg, #FBF6E8 0%, #F1EAD3 50%, #E8DEC0 100%)",
+        }}
+      >
+        {/* left page */}
+        <div className="relative flex-1 px-4 pt-3 pb-4">
+          {/* chapter heading */}
+          <div className="h-[7px] w-[55%] bg-ink-900/85 rounded-sm" />
+          <div className="h-[2px] w-[36%] bg-ink-900/40 rounded-sm mt-[3px]" />
+          <div className="space-y-[3px] mt-3">
+            {leftLines.map((w, i) =>
+              w === 0 ? (
+                <div key={i} className="h-1" />
+              ) : (
+                <div
+                  key={i}
+                  className="h-[1.5px] bg-ink-900/60 rounded"
+                  style={{ width: `${w}%` }}
+                />
+              )
+            )}
+          </div>
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] font-serif text-ink-900/50 tracking-wider">
+            42
+          </div>
+        </div>
+        {/* binding shadow */}
+        <div
+          className="w-[3px]"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.28) 50%, rgba(0,0,0,0.05) 100%)",
+          }}
+        />
+        {/* right page */}
+        <div className="relative flex-1 px-4 pt-3 pb-4">
+          <div className="space-y-[3px]">
+            {rightLines.map((w, i) =>
+              w === 0 ? (
+                <div key={i} className="h-1" />
+              ) : (
+                <div
+                  key={i}
+                  className="h-[1.5px] bg-ink-900/60 rounded"
+                  style={{ width: `${w}%` }}
+                />
+              )
+            )}
+          </div>
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] font-serif text-ink-900/50 tracking-wider">
+            43
+          </div>
+        </div>
       </div>
     </div>
   );
