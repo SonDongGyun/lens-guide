@@ -22,7 +22,7 @@ export function KioskFrame({ children, showFooter = true, primary, secondary }: 
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="px-10 pt-8 pb-4"
+          className="px-4 sm:px-8 lg:px-10 pt-5 sm:pt-8 pb-3 sm:pb-4"
         >
           <ProgressBar current={screen} />
         </motion.div>
@@ -37,11 +37,16 @@ export function KioskFrame({ children, showFooter = true, primary, secondary }: 
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="px-10 py-6 bg-white/70 backdrop-blur-xl border-t border-ink-50 flex items-center justify-between gap-4"
+          className="px-4 sm:px-8 lg:px-10 py-3 sm:py-6 bg-white/70 backdrop-blur-xl border-t border-ink-50 flex items-center justify-between gap-3 sm:gap-4"
         >
           <div>
             {secondary && (
-              <Button variant="ghost" size="lg" onClick={secondary.onClick}>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="h-12 px-5 text-sm rounded-xl sm:h-14 sm:px-8 sm:text-lg sm:rounded-2xl"
+                onClick={secondary.onClick}
+              >
                 {secondary.label}
               </Button>
             )}
@@ -50,14 +55,15 @@ export function KioskFrame({ children, showFooter = true, primary, secondary }: 
             <Button
               variant="dark"
               size="lg"
+              className="h-12 px-5 text-sm rounded-xl sm:h-14 sm:px-8 sm:text-lg sm:rounded-2xl"
               onClick={primary.onClick}
               disabled={primary.disabled}
             >
               {primary.label}
               <svg
-                className="ml-2"
-                width="20"
-                height="20"
+                className="ml-1.5 sm:ml-2"
+                width="18"
+                height="18"
                 viewBox="0 0 20 20"
                 fill="none"
               >

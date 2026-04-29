@@ -18,7 +18,7 @@ export function ThicknessScreen() {
   const info = INDEXES.find((i) => i.id === selected)!;
 
   return (
-    <div className="h-full overflow-y-auto px-10 lg:px-20 pb-10">
+    <div className="h-full overflow-y-auto px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-7xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 4"
@@ -30,7 +30,7 @@ export function ThicknessScreen() {
           desc="압축률을 바꿔보면 같은 프레임에서 옆면 두께가 어떻게 변하는지 직접 확인할 수 있어요."
         />
 
-        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 mt-8 items-start">
+        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 sm:gap-8 mt-6 sm:mt-8 items-start">
           {/* visual */}
           <div>
             <ThicknessVisual
@@ -40,17 +40,17 @@ export function ThicknessScreen() {
             />
 
             {/* prescription presets */}
-            <div className="mt-5 p-4 rounded-3xl bg-white border border-ink-50 shadow-soft">
-              <div className="flex items-center justify-between">
+            <div className="mt-4 sm:mt-5 p-4 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-soft">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-ink-400 font-semibold">
+                  <div className="text-[11px] sm:text-xs uppercase tracking-wider text-ink-400 font-semibold">
                     내 도수 (예시)
                   </div>
-                  <div className="text-lg font-bold text-ink-900 font-num">
+                  <div className="text-base sm:text-lg font-bold text-ink-900 font-num">
                     {prescription.toFixed(2)}D
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {RX_PRESETS.map((rx) => {
                     const active = prescription === rx;
                     return (
@@ -58,7 +58,7 @@ export function ThicknessScreen() {
                         key={rx}
                         onClick={() => setPrescription(rx)}
                         className={cn(
-                          "px-3 py-2 rounded-xl text-sm font-semibold transition-all",
+                          "px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all font-num",
                           active
                             ? "bg-ink-900 text-white shadow-md"
                             : "bg-bg-muted text-ink-500 hover:bg-ink-50"
@@ -79,7 +79,7 @@ export function ThicknessScreen() {
                 onChange={(e) => setPrescription(Number(e.target.value))}
                 className="w-full accent-brand h-2 mt-3"
               />
-              <div className="flex justify-between text-xs text-ink-300 mt-1">
+              <div className="flex justify-between text-[10px] sm:text-xs text-ink-300 mt-1 font-num">
                 <span>-0.50D</span>
                 <span>-5.00D</span>
                 <span>-10.00D</span>
@@ -88,8 +88,8 @@ export function ThicknessScreen() {
           </div>
 
           {/* index buttons + summary */}
-          <div className="space-y-3">
-            <div className="text-xs text-ink-400 font-semibold tracking-wider uppercase mb-1">
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="text-[11px] sm:text-xs text-ink-400 font-semibold tracking-wider uppercase mb-1">
               압축률 비교
             </div>
             {INDEXES.map((opt, i) => {
@@ -104,17 +104,17 @@ export function ThicknessScreen() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
-                    "w-full text-left p-5 rounded-3xl border transition-all duration-200 relative",
+                    "w-full text-left p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all duration-200 relative",
                     active
                       ? "bg-ink-900 border-ink-900 text-white shadow-elevated"
                       : "bg-white border-ink-50 hover:border-ink-100 hover:shadow-card"
                   )}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center justify-between gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                       <div
                         className={cn(
-                          "shrink-0 w-12 h-12 rounded-2xl grid place-items-center font-bold text-base",
+                          "shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl grid place-items-center font-bold text-sm sm:text-base font-num",
                           active ? "bg-white text-ink-900" : "bg-bg-muted text-ink-700"
                         )}
                       >
@@ -123,7 +123,7 @@ export function ThicknessScreen() {
                       <div className="min-w-0">
                         <div
                           className={cn(
-                            "font-semibold tracking-tight",
+                            "text-sm sm:text-base font-semibold tracking-tight",
                             active ? "text-white" : "text-ink-900"
                           )}
                         >
@@ -131,7 +131,7 @@ export function ThicknessScreen() {
                         </div>
                         <div
                           className={cn(
-                            "text-xs mt-0.5",
+                            "text-[11px] sm:text-xs mt-0.5",
                             active ? "text-white/60" : "text-ink-400"
                           )}
                         >
@@ -142,7 +142,7 @@ export function ThicknessScreen() {
                     <PriceTier tier={opt.priceTier} active={active} />
                   </div>
 
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="mt-2.5 sm:mt-3 flex items-center gap-3">
                     <Bar
                       label="얇기"
                       value={1 - opt.thicknessFactor}

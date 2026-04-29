@@ -31,8 +31,8 @@ export function SelectCard({
       whileTap={{ scale: 0.98 }}
       whileHover={{ y: -3 }}
       className={cn(
-        "group relative text-left p-6 rounded-3xl border transition-all duration-200",
-        "flex items-start gap-4 w-full",
+        "group relative text-left p-4 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all duration-200",
+        "flex items-start gap-3 sm:gap-4 w-full",
         selected
           ? "bg-brand-soft border-brand shadow-[0_12px_32px_rgba(49,130,246,0.18)]"
           : "bg-white border-ink-50 hover:border-ink-100 hover:shadow-card",
@@ -42,7 +42,7 @@ export function SelectCard({
       {emoji && (
         <div
           className={cn(
-            "shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-colors",
+            "shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl transition-colors",
             selected ? "bg-white" : "bg-bg-muted"
           )}
         >
@@ -52,7 +52,7 @@ export function SelectCard({
       <div className="flex-1 min-w-0">
         <div
           className={cn(
-            "text-lg font-semibold tracking-tight",
+            "text-base sm:text-lg font-semibold tracking-tight",
             selected ? "text-brand-dark" : "text-ink-900"
           )}
         >
@@ -61,7 +61,7 @@ export function SelectCard({
         {desc && (
           <div
             className={cn(
-              "text-sm mt-1",
+              "text-xs sm:text-sm mt-0.5 sm:mt-1 leading-snug",
               selected ? "text-brand-dark/70" : "text-ink-400"
             )}
           >
@@ -75,7 +75,7 @@ export function SelectCard({
           opacity: selected ? 1 : 0,
         }}
         transition={{ type: "spring", stiffness: 400, damping: 22 }}
-        className="shrink-0 w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center"
+        className="shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-brand text-white flex items-center justify-center"
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M2 7l3.5 3.5L12 4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />

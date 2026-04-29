@@ -24,15 +24,15 @@ export function ProgressBar({ current }: Props) {
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2 text-sm">
+      <div className="flex justify-between items-center mb-2 sm:mb-3 gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-w-0">
           <span className="font-num text-brand font-bold">{idx + 1}</span>
           <span className="text-ink-300">/ {VISIBLE_STEPS.length}</span>
-          <span className="ml-2 text-ink-700 font-medium">
+          <span className="ml-1.5 sm:ml-2 text-ink-700 font-medium truncate">
             {VISIBLE_STEPS[idx]?.label}
           </span>
         </div>
-        <div className="text-xs text-ink-300 font-medium tracking-wider uppercase">
+        <div className="hidden sm:block text-xs text-ink-300 font-medium tracking-wider uppercase">
           내게 맞는 렌즈 찾기
         </div>
       </div>

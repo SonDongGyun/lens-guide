@@ -77,7 +77,7 @@ export function WelcomeScreen() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="text-display-lg lg:text-display-xl tracking-tight leading-[1.05] text-ink-900"
+            className="text-[40px] sm:text-display md:text-display-lg lg:text-display-xl tracking-tight leading-[1.08] sm:leading-[1.05] text-ink-900 font-bold"
           >
             나에게 맞는 렌즈,
             <br />
@@ -88,7 +88,7 @@ export function WelcomeScreen() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45, duration: 0.6 }}
-            className="mt-6 text-xl text-ink-500 max-w-xl text-balance"
+            className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl text-ink-500 max-w-xl text-balance"
           >
             사용 목적과 평소 불편함만 알려주시면, 렌즈 종류 · 두께 · 코팅의 차이를 직접 비교해볼 수 있는 인터랙티브 안내예요.
           </motion.p>
@@ -97,14 +97,14 @@ export function WelcomeScreen() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.6 }}
-            className="mt-10 flex items-center gap-3"
+            className="mt-7 sm:mt-10 flex flex-wrap items-center gap-3"
           >
-            <Button variant="dark" size="xl" onClick={next}>
+            <Button variant="dark" size="lg" className="sm:h-16 sm:px-10 sm:text-xl sm:rounded-3xl" onClick={next}>
               지금 시작하기
               <svg
                 className="ml-2"
-                width="22"
-                height="22"
+                width="20"
+                height="20"
                 viewBox="0 0 22 22"
                 fill="none"
               >
@@ -117,7 +117,7 @@ export function WelcomeScreen() {
                 />
               </svg>
             </Button>
-            <div className="text-sm text-ink-400 ml-2">
+            <div className="text-xs sm:text-sm text-ink-400 sm:ml-2">
               개인정보 입력 없음 · 평균 1분 30초
             </div>
           </motion.div>

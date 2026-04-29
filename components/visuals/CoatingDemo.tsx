@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, type ReactNode } from "react";
 import type { CoatingId } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { ScratchVisual } from "./ScratchVisual";
 
 interface Props {
   id: CoatingId;
@@ -45,7 +46,7 @@ const COMPARE_LABELS: Record<
 const BACKGROUND_ASSETS: Partial<Record<CompareCoatingId, string>> = {};
 
 export function CoatingDemo({ id }: Props) {
-  if (id === "scratch") return <ScratchExplainer />;
+  if (id === "scratch") return <ScratchVisual />;
   return <CompareView id={id} />;
 }
 
@@ -400,8 +401,8 @@ function AREffect({ after }: EffectProps) {
 
 /* =============================== BLUE LIGHT =============================== */
 
-// Document-editor mockup — looks like everyday office work, not a dev tool,
-// so the blue-light story reads to general customers.
+// Document-editor mockup — real Korean filenames in the sidebar and real
+// prose in the page so it reads like an actual work screen, not a wireframe.
 function BlueBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-gradient-to-b from-[#080F1C] via-[#0A1426] to-[#0F1A30]">
@@ -414,89 +415,101 @@ function BlueBackground() {
         }}
       />
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[64%] h-[72%] rounded-xl bg-[#0E1322] p-[5px] shadow-[0_0_60px_rgba(80,140,255,0.45)]">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[68%] h-[74%] rounded-xl bg-[#0E1322] p-[5px] shadow-[0_0_60px_rgba(80,140,255,0.45)]">
         <div className="relative w-full h-full rounded-md overflow-hidden bg-[#F4F6FA]">
           {/* Toolbar */}
-          <div className="absolute inset-x-0 top-0 h-[10%] bg-[#EFF2F7] border-b border-[#DDE2EA] flex items-center px-3 gap-2.5">
-            <div className="flex gap-1">
+          <div className="absolute inset-x-0 top-0 h-[9%] bg-[#EFF2F7] border-b border-[#DDE2EA] flex items-center px-3 gap-2.5 text-[8px] sm:text-[9px] text-ink-700">
+            <div className="flex gap-1 shrink-0">
               <div className="w-1.5 h-1.5 rounded-full bg-[#C4CAD3]" />
               <div className="w-1.5 h-1.5 rounded-full bg-[#C4CAD3]" />
               <div className="w-1.5 h-1.5 rounded-full bg-[#C4CAD3]" />
             </div>
-            <div className="ml-2 flex gap-2">
-              {[18, 14, 14, 14, 14].map((w, i) => (
-                <div
-                  key={i}
-                  className="h-[3px] rounded-sm"
-                  style={{ width: w, background: "rgba(80,95,115,0.42)" }}
-                />
-              ))}
+            <div className="ml-1 flex items-center gap-3 font-medium">
+              <span>파일</span>
+              <span>편집</span>
+              <span>보기</span>
+              <span>삽입</span>
+              <span>도구</span>
             </div>
-            <div className="ml-auto flex gap-1">
-              {[0, 1, 2].map((i) => (
+            <div className="ml-auto flex items-center gap-1.5">
+              {["B", "I", "U"].map((g, i) => (
                 <div
                   key={i}
-                  className="w-2 h-2 rounded-sm"
-                  style={{ background: "rgba(80,95,115,0.20)" }}
-                />
+                  className="w-3 h-3 rounded-sm bg-[#E1E5EC] grid place-items-center text-[7px] font-bold text-ink-500"
+                >
+                  {g}
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Sidebar (document tree) */}
-          <div className="absolute left-0 top-[10%] bottom-0 w-[18%] bg-[#E8ECF2] border-r border-[#D6DCE4]">
-            <div className="px-2 pt-3 flex flex-col gap-1.5">
+          {/* Sidebar (document tree with real filenames) */}
+          <div className="absolute left-0 top-[9%] bottom-0 w-[22%] bg-[#E8ECF2] border-r border-[#D6DCE4] overflow-hidden">
+            <div className="px-2 pt-2 flex flex-col gap-[3px] text-[7px] sm:text-[8px] text-ink-600">
+              <div className="font-bold text-ink-500 text-[6px] sm:text-[7px] tracking-wider mt-1 mb-0.5 uppercase">
+                내 문서
+              </div>
               {[
-                { w: 60, indent: 0, active: false },
-                { w: 70, indent: 1, active: false },
-                { w: 56, indent: 1, active: true },
-                { w: 64, indent: 0, active: false },
-                { w: 50, indent: 1, active: false },
-                { w: 60, indent: 1, active: false },
-                { w: 44, indent: 1, active: false },
-                { w: 56, indent: 0, active: false },
-                { w: 48, indent: 1, active: false },
+                { name: "📁 2026 기획", indent: 0 },
+                { name: "📄 분기 보고", indent: 1 },
+                { name: "📄 마케팅 전략", indent: 1, active: true },
+                { name: "📁 회의록", indent: 0 },
+                { name: "📄 04.21 주간", indent: 1 },
+                { name: "📄 04.14 주간", indent: 1 },
+                { name: "📁 자료실", indent: 0 },
+                { name: "📄 시장 조사", indent: 1 },
+                { name: "📄 경쟁사 분석", indent: 1 },
               ].map((row, i) => (
                 <div
                   key={i}
-                  className="h-1 rounded-sm"
-                  style={{
-                    width: `${row.w}%`,
-                    marginLeft: `${row.indent * 12}%`,
-                    background: row.active
-                      ? "rgba(70,105,160,0.55)"
-                      : "rgba(60,75,100,0.28)",
-                  }}
-                />
+                  className={cn(
+                    "px-1 py-0.5 rounded-[3px] truncate",
+                    row.active && "bg-[#C8D6EA] text-[#1F3A6E] font-semibold"
+                  )}
+                  style={{ marginLeft: `${row.indent * 8}px` }}
+                >
+                  {row.name}
+                </div>
               ))}
             </div>
           </div>
 
           {/* Document page */}
-          <div className="absolute left-[20%] right-[2%] top-[12%] bottom-[2%] bg-white rounded-sm shadow-[0_2px_6px_rgba(0,0,0,0.05)] overflow-hidden">
-            <div className="px-5 pt-5 flex flex-col gap-[4px]">
-              <div className="h-2 w-[55%] rounded-sm bg-[#3A4554] mb-1" />
-              <div className="h-1.5 w-[35%] rounded-sm bg-[#9DA7B5] mb-2.5" />
-              {[
-                { w: 88 }, { w: 92 }, { w: 84 }, { w: 90 }, { w: 76 },
-                { w: 0 },
-                { w: 90 }, { w: 86 }, { w: 92 }, { w: 78 }, { w: 88 },
-                { w: 0 },
-                { w: 84 }, { w: 90 },
-              ].map((row, i) =>
-                row.w === 0 ? (
-                  <div key={i} className="h-1.5" />
-                ) : (
-                  <div
-                    key={i}
-                    className="h-1 rounded-sm"
-                    style={{
-                      width: `${row.w}%`,
-                      background: "rgba(80,95,115,0.30)",
-                    }}
-                  />
-                )
-              )}
+          <div className="absolute left-[24%] right-[3%] top-[11%] bottom-[3%] bg-white rounded-sm shadow-[0_2px_6px_rgba(0,0,0,0.05)] overflow-hidden">
+            <div className="px-4 pt-3 pb-2 text-ink-900 leading-tight">
+              <div className="text-[10px] sm:text-[12px] font-bold tracking-tight">
+                2026 상반기 마케팅 전략
+              </div>
+              <div className="text-[6px] sm:text-[7px] text-ink-400 mt-0.5">
+                기획팀 김민수 · 2026.04.28 · 작성 중
+              </div>
+
+              <div className="mt-2 text-[7px] sm:text-[8px] font-bold text-ink-800">
+                1. 배경
+              </div>
+              <p className="mt-0.5 text-[6px] sm:text-[7px] leading-snug text-ink-700">
+                지난 분기 결과를 바탕으로 상반기 핵심 캠페인 방향을 정리했습니다.
+                디지털 채널 비중을 확대하고, 매장 경험과 자연스럽게 이어지는 옴니
+                흐름을 강화하는 것이 이번 분기의 가장 큰 변화입니다.
+              </p>
+
+              <div className="mt-1.5 text-[7px] sm:text-[8px] font-bold text-ink-800">
+                2. 핵심 목표
+              </div>
+              <ul className="mt-0.5 text-[6px] sm:text-[7px] leading-snug text-ink-700 pl-3 list-disc">
+                <li>신규 가입자 12% 증가</li>
+                <li>매장 방문 전환율 1.5배 상승</li>
+                <li>재구매율 8% 개선</li>
+              </ul>
+
+              <div className="mt-1.5 text-[7px] sm:text-[8px] font-bold text-ink-800">
+                3. 채널 전략
+              </div>
+              <p className="mt-0.5 text-[6px] sm:text-[7px] leading-snug text-ink-700">
+                디지털 광고 예산을 기존 대비 30% 확대하고, 영상 콘텐츠 비중을
+                단계적으로 늘려갑니다. 오프라인 매장에서는 시즌 컬렉션 체험을
+                중심으로 방문 동기를 강화합니다.
+              </p>
             </div>
           </div>
 
@@ -757,277 +770,3 @@ function HydroSmears() {
   );
 }
 
-/* =============================== SCRATCH =============================== */
-
-type LayerId = "surface" | "hardcoat" | "substrate";
-type ScenarioId = "wipe" | "desk" | "bag";
-type ScratchSelection =
-  | { kind: "scenario"; id: ScenarioId }
-  | { kind: "layer"; id: LayerId };
-
-const SCRATCH_LAYERS: Record<LayerId, { name: string; role: string }> = {
-  surface: {
-    name: "표면 외층",
-    role: "가장 바깥에서 일상의 마찰을 먼저 받아내는 얇은 막입니다. 매일 닦을 때 생기는 미세한 잔기스가 가장 먼저 자리잡는 위치이기도 합니다.",
-  },
-  hardcoat: {
-    name: "하드코트",
-    role: "이 코팅의 핵심층. 표면 경도를 높여 같은 마찰·충격에서도 흠집이 덜 깊게 들어가도록 도와줍니다.",
-  },
-  substrate: {
-    name: "렌즈 본체",
-    role: "시력 교정을 담당하는 광학 본체. 본체가 직접 긁히면 시야 왜곡이 남기 때문에, 위 두 층이 마찰을 먼저 받아내도록 설계되어 있습니다.",
-  },
-};
-
-const SCRATCH_SCENARIOS: Record<
-  ScenarioId,
-  { label: string; layer: LayerId; body: string }
-> = {
-  wipe: {
-    label: "안경닦이 반복",
-    layer: "surface",
-    body: "매일 닦으면 미세 먼지와 천 사이의 작은 마찰이 누적됩니다. 표면 외층이 이를 먼저 받아내며, 하드코트가 잔기스가 깊어지는 걸 늦춰 줍니다.",
-  },
-  desk: {
-    label: "책상에 뒤집어 둠",
-    layer: "hardcoat",
-    body: "테이블의 거친 면이나 모서리에 직접 닿는 상황. 단단한 하드코트가 충격 흠집의 깊이를 줄여 본체 손상으로 이어지는 걸 막아 줍니다.",
-  },
-  bag: {
-    label: "가방 속 마찰",
-    layer: "hardcoat",
-    body: "열쇠·동전 같은 단단한 물건과 무작위 방향으로 부딪힙니다. 하드코트가 받아내면서 본체까지 번지는 흠집의 깊이를 줄여 줍니다.",
-  },
-};
-
-function ScratchExplainer() {
-  const [selection, setSelection] = useState<ScratchSelection>({
-    kind: "scenario",
-    id: "wipe",
-  });
-
-  const activeLayer: LayerId =
-    selection.kind === "layer"
-      ? selection.id
-      : SCRATCH_SCENARIOS[selection.id].layer;
-
-  const panel =
-    selection.kind === "layer"
-      ? {
-          tag: "레이어 역할",
-          title: SCRATCH_LAYERS[selection.id].name,
-          body: SCRATCH_LAYERS[selection.id].role,
-        }
-      : {
-          tag: "일상 마찰 상황",
-          title: SCRATCH_SCENARIOS[selection.id].label,
-          body: SCRATCH_SCENARIOS[selection.id].body,
-        };
-
-  return (
-    <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card bg-gradient-to-br from-[#F5F8FC] via-white to-[#EBF1F8] select-none">
-      <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-ink-900 text-white text-xs font-bold tracking-wider uppercase">
-        표면 경도 강화
-      </div>
-
-      <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-4 lg:gap-6 px-6 sm:px-8 pt-16 pb-12">
-        <div className="relative flex flex-col items-center justify-center">
-          <ScratchDiagram
-            activeLayer={activeLayer}
-            onSelectLayer={(id) => setSelection({ kind: "layer", id })}
-          />
-          <div className="mt-2 text-[11px] text-ink-400 text-center">
-            레이어를 탭하면 역할이 강조됩니다
-          </div>
-        </div>
-
-        <div className="self-center flex flex-col">
-          <div className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold">
-            {panel.tag}
-          </div>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${selection.kind}-${selection.id}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-              className="mt-1"
-            >
-              <div className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 leading-tight">
-                {panel.title}
-              </div>
-              <p className="mt-2 text-ink-500 leading-relaxed text-sm sm:text-[15px] min-h-[72px]">
-                {panel.body}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="mt-4">
-            <div className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold mb-2">
-              상황 선택
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(Object.keys(SCRATCH_SCENARIOS) as ScenarioId[]).map((id) => {
-                const active =
-                  selection.kind === "scenario" && selection.id === id;
-                return (
-                  <motion.button
-                    key={id}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setSelection({ kind: "scenario", id })}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
-                      active
-                        ? "bg-ink-900 text-white border-ink-900"
-                        : "bg-white text-ink-600 border-ink-100 hover:border-ink-300"
-                    )}
-                  >
-                    {SCRATCH_SCENARIOS[id].label}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 max-w-[92%] px-3 py-1.5 rounded-full bg-white/85 backdrop-blur text-ink-500 text-[10px] font-medium tracking-wide text-center">
-        * 스크래치를 완전히 막지는 않으며, 거친 표면이나 강한 충격에는 손상될 수 있습니다
-      </div>
-    </div>
-  );
-}
-
-function ScratchDiagram({
-  activeLayer,
-  onSelectLayer,
-}: {
-  activeLayer: LayerId;
-  onSelectLayer: (id: LayerId) => void;
-}) {
-  const dimSurface = activeLayer !== "surface";
-  const dimHardcoat = activeLayer !== "hardcoat";
-  const dimSubstrate = activeLayer !== "substrate";
-
-  return (
-    <svg viewBox="0 0 420 280" className="w-full max-w-[420px] h-auto">
-      <defs>
-        <linearGradient id="substrate-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#D6E1F2" />
-          <stop offset="100%" stopColor="#B8C8E0" />
-        </linearGradient>
-      </defs>
-
-      {/* Substrate — clickable rounded rect, the lens body */}
-      <g
-        onClick={() => onSelectLayer("substrate")}
-        style={{ cursor: "pointer" }}
-      >
-        <rect
-          x="40"
-          y="118"
-          width="340"
-          height="110"
-          rx="55"
-          fill="url(#substrate-grad)"
-          stroke={dimSubstrate ? "#B8C8E0" : "#3D4A5C"}
-          strokeWidth={dimSubstrate ? 1.2 : 2.4}
-          opacity={dimSubstrate ? 0.55 : 1}
-        />
-      </g>
-
-      {/* Hardcoat — clickable arch on top of the substrate */}
-      <g
-        onClick={() => onSelectLayer("hardcoat")}
-        style={{ cursor: "pointer" }}
-      >
-        <path
-          d="M40 118 Q 40 90 95 90 L 325 90 Q 380 90 380 118 Z"
-          fill="#3182F6"
-          opacity={dimHardcoat ? 0.42 : 0.95}
-          stroke={dimHardcoat ? "transparent" : "#0C5BD6"}
-          strokeWidth="2"
-        />
-      </g>
-
-      {/* Surface — thin top line; transparent rect enlarges the click target */}
-      <g
-        onClick={() => onSelectLayer("surface")}
-        style={{ cursor: "pointer" }}
-      >
-        <rect x="40" y="68" width="340" height="26" fill="transparent" />
-        <path
-          d="M65 95 Q 95 80 130 80 L 290 80 Q 325 80 355 95"
-          stroke={dimSurface ? "rgba(123,97,255,0.45)" : "#7B61FF"}
-          strokeWidth={dimSurface ? 3 : 5}
-          fill="none"
-          strokeLinecap="round"
-        />
-      </g>
-
-      {/* Labels */}
-      <g fontFamily="inherit" fontSize="13" fill="#191F28">
-        <line
-          x1="200"
-          y1="78"
-          x2="240"
-          y2="40"
-          stroke={dimSurface ? "rgba(123,97,255,0.4)" : "#7B61FF"}
-          strokeWidth={dimSurface ? 1.2 : 1.6}
-        />
-        <text
-          x="244"
-          y="38"
-          fontWeight="700"
-          fill={dimSurface ? "rgba(123,97,255,0.55)" : "#7B61FF"}
-        >
-          표면 외층
-        </text>
-
-        <line
-          x1="120"
-          y1="100"
-          x2="60"
-          y2="50"
-          stroke={dimHardcoat ? "rgba(49,130,246,0.4)" : "#3182F6"}
-          strokeWidth={dimHardcoat ? 1.2 : 1.6}
-        />
-        <text
-          x="20"
-          y="38"
-          fontWeight="700"
-          fill={dimHardcoat ? "rgba(49,130,246,0.55)" : "#3182F6"}
-        >
-          하드코트
-        </text>
-        <text
-          x="20"
-          y="54"
-          fontSize="11"
-          fill={dimHardcoat ? "rgba(78,89,104,0.55)" : "#4E5968"}
-        >
-          단단한 보호층
-        </text>
-
-        <line
-          x1="210"
-          y1="170"
-          x2="240"
-          y2="252"
-          stroke={dimSubstrate ? "rgba(138,163,194,0.5)" : "#3D4A5C"}
-          strokeWidth={dimSubstrate ? 1.2 : 1.6}
-        />
-        <text
-          x="244"
-          y="258"
-          fontWeight="700"
-          fill={dimSubstrate ? "rgba(78,89,104,0.55)" : "#191F28"}
-        >
-          렌즈 본체
-        </text>
-      </g>
-    </svg>
-  );
-}

@@ -21,10 +21,14 @@ const VIEW_LABELS: Record<View, string> = {
   side: "측면",
 };
 
+// Pulled back ~50 % from the original framing because mobile/tablet
+// viewports were rendering the lens too large — overlays (tabs at top,
+// edge-thickness HUD at right) clipped into it. Larger margin now leaves
+// room for the chrome on every view, including mobile portrait widths.
 const VIEW_POSITIONS: Record<View, [number, number, number]> = {
-  front: [0, 0, 50],
-  oblique: [32, 14, 32],
-  side: [50, 0, 0],
+  front: [0, 0, 108],
+  oblique: [72, 32, 72],
+  side: [108, 0, 0],
 };
 
 const RADIUS_MM = 15;
@@ -52,7 +56,7 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
 
       <Canvas
         dpr={[1, 2]}
-        camera={{ position: VIEW_POSITIONS.oblique, fov: 32, near: 0.1, far: 200 }}
+        camera={{ position: VIEW_POSITIONS.oblique, fov: 32, near: 0.1, far: 320 }}
         gl={{ antialias: true, alpha: true }}
         style={{ background: "transparent" }}
       >
@@ -67,7 +71,7 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
       </Canvas>
 
       {/* view toggle */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 inline-flex p-1 rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
+      <div className="absolute top-2.5 sm:top-4 left-1/2 -translate-x-1/2 z-10 inline-flex p-0.5 sm:p-1 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
         {(Object.keys(VIEW_LABELS) as View[]).map((v) => {
           const active = view === v;
           return (
@@ -76,14 +80,14 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
               onClick={() => setView(v)}
               whileTap={{ scale: 0.96 }}
               className={cn(
-                "relative px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
+                "relative px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-colors",
                 active ? "text-ink-900" : "text-white/70 hover:text-white"
               )}
             >
               {active && (
                 <motion.div
                   layoutId="thickness-view-tab"
-                  className="absolute inset-0 rounded-xl bg-white shadow-card"
+                  className="absolute inset-0 rounded-lg sm:rounded-xl bg-white shadow-card"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
@@ -94,35 +98,35 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
       </div>
 
       {/* index + view badge */}
-      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/12 backdrop-blur-md text-white text-xs font-bold tracking-wider uppercase border border-white/15">
+      <div className="absolute top-2.5 sm:top-4 left-2.5 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/12 backdrop-blur-md text-white text-[10px] sm:text-xs font-bold tracking-wider uppercase border border-white/15">
         {index} · {VIEW_LABELS[view]}
       </div>
 
       {/* edge thickness HUD */}
       <motion.div
-        className="absolute right-6 top-1/2 -translate-y-1/2 text-right z-10"
+        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 text-right z-10"
         key={`${index}-${prescription.toFixed(2)}`}
         initial={{ opacity: 0, x: 8 }}
         animate={{ opacity: 1, x: 0 }}
       >
-        <div className="text-[11px] uppercase tracking-wider text-white/55 font-semibold">
+        <div className="text-[9px] sm:text-[11px] uppercase tracking-wider text-white/55 font-semibold">
           가장자리 두께
         </div>
-        <div className="text-4xl font-bold text-white font-num leading-none mt-1">
+        <div className="text-2xl sm:text-4xl font-bold text-white font-num leading-none mt-0.5 sm:mt-1">
           {edgeMM.toFixed(1)}
-          <span className="text-lg text-white/60 font-medium ml-1">mm</span>
+          <span className="text-xs sm:text-lg text-white/60 font-medium ml-0.5 sm:ml-1">mm</span>
         </div>
-        <div className="text-[11px] text-white/50 mt-1">
+        <div className="text-[9px] sm:text-[11px] text-white/50 mt-0.5 sm:mt-1">
           도수 {prescription.toFixed(2)}D 기준
         </div>
       </motion.div>
 
       {/* caption */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 z-10">
-        <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur text-[11px] text-white/75 font-medium border border-white/10">
+      <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 right-2.5 sm:right-4 flex items-center justify-between gap-2 sm:gap-3 z-10">
+        <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur text-[9px] sm:text-[11px] text-white/75 font-medium border border-white/10">
           프레임은 동일, 외곽 두께만 변합니다
         </div>
-        <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur text-[11px] text-white/75 font-medium border border-white/10">
+        <div className="hidden sm:block px-3 py-1.5 rounded-full bg-white/10 backdrop-blur text-[11px] text-white/75 font-medium border border-white/10">
           압축률↑ → 더 얇아짐
         </div>
       </div>

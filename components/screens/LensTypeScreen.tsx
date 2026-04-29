@@ -50,7 +50,7 @@ export function LensTypeScreen() {
         />
 
         {/* Tabs */}
-        <div className="mt-8 inline-flex p-1.5 rounded-2xl bg-bg-muted">
+        <div className="mt-6 sm:mt-8 inline-flex w-full sm:w-auto p-1 sm:p-1.5 rounded-2xl bg-bg-muted">
           {TABS.map((t) => {
             const active = lensType === t.id;
             return (
@@ -59,7 +59,7 @@ export function LensTypeScreen() {
                 onClick={() => setLensType(t.id)}
                 whileTap={{ scale: 0.97 }}
                 className={cn(
-                  "relative px-6 py-3 rounded-xl text-base font-semibold transition-colors",
+                  "relative flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-colors whitespace-nowrap",
                   active ? "text-ink-900" : "text-ink-400"
                 )}
               >
@@ -87,7 +87,7 @@ export function LensTypeScreen() {
             <div className="text-xs text-ink-400 font-semibold tracking-wider uppercase mb-2">
               어떤 거리에 맞춘 단초점인가요?
             </div>
-            <div className="inline-flex p-1.5 rounded-2xl bg-white border border-ink-100">
+            <div className="inline-flex w-full sm:w-auto p-1 sm:p-1.5 rounded-2xl bg-white border border-ink-100">
               {SINGLE_TARGETS.map((t) => {
                 const active = singleTarget === t.id;
                 return (
@@ -96,7 +96,7 @@ export function LensTypeScreen() {
                     onClick={() => setSingleTarget(t.id)}
                     whileTap={{ scale: 0.97 }}
                     className={cn(
-                      "relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left",
+                      "relative flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm font-semibold transition-colors text-left",
                       active ? "text-ink-900" : "text-ink-400"
                     )}
                   >
@@ -121,7 +121,7 @@ export function LensTypeScreen() {
           </motion.div>
         )}
 
-        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 mt-6 items-start">
+        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 sm:gap-8 mt-5 sm:mt-6 items-start">
           {/* visual */}
           <LensTypeVisual lensType={lensType} singleTarget={singleTarget} />
 
@@ -131,23 +131,23 @@ export function LensTypeScreen() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-card"
+            className="p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-card"
           >
-            <div className="text-sm text-brand font-bold tracking-wider uppercase">
+            <div className="text-xs sm:text-sm text-brand font-bold tracking-wider uppercase">
               {info.label}
             </div>
-            <div className="mt-2 text-2xl font-bold tracking-tight text-ink-900">
+            <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
               {info.tagline}
             </div>
-            <p className="mt-3 text-ink-500 leading-relaxed">{info.description}</p>
+            <p className="mt-2 sm:mt-3 text-sm sm:text-base text-ink-500 leading-relaxed">{info.description}</p>
 
             {lensType === "office" && (
-              <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900">
+              <div className="mt-3 sm:mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs sm:text-sm text-amber-900 leading-snug">
                 먼 거리용으로는 맞지 않으니, 운전 등 외부 활동이 잦으면 누진과 비교해보세요.
               </div>
             )}
 
-            <div className="mt-6 grid grid-cols-3 gap-2">
+            <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2">
               {[
                 { k: "near", label: "책 읽기", emoji: "📖" },
                 { k: "mid", label: "모니터", emoji: "💻" },
@@ -158,19 +158,19 @@ export function LensTypeScreen() {
                   <div
                     key={x.k}
                     className={cn(
-                      "rounded-2xl p-4 text-center transition-colors",
+                      "rounded-xl sm:rounded-2xl p-2.5 sm:p-4 text-center transition-colors",
                       v
                         ? "bg-brand-soft border border-brand/20"
                         : "bg-bg-muted border border-transparent"
                     )}
                   >
-                    <div className="text-2xl">{x.emoji}</div>
-                    <div className="mt-1 text-sm font-semibold text-ink-700">
+                    <div className="text-xl sm:text-2xl">{x.emoji}</div>
+                    <div className="mt-0.5 sm:mt-1 text-[11px] sm:text-sm font-semibold text-ink-700 leading-tight">
                       {x.label}
                     </div>
                     <div
                       className={cn(
-                        "mt-1 text-xs font-bold",
+                        "mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-bold",
                         v ? "text-brand-dark" : "text-ink-300"
                       )}
                     >
@@ -181,11 +181,11 @@ export function LensTypeScreen() {
               })}
             </div>
 
-            <div className="mt-5 p-4 rounded-2xl bg-bg-muted">
-              <div className="text-xs uppercase tracking-wider text-ink-400 font-semibold">
+            <div className="mt-4 sm:mt-5 p-3 sm:p-4 rounded-2xl bg-bg-muted">
+              <div className="text-[11px] sm:text-xs uppercase tracking-wider text-ink-400 font-semibold">
                 이런 분께 적합
               </div>
-              <div className="mt-1 text-ink-900 font-medium">{info.bestFor}</div>
+              <div className="mt-1 text-sm sm:text-base text-ink-900 font-medium leading-snug">{info.bestFor}</div>
             </div>
           </motion.div>
         </div>
