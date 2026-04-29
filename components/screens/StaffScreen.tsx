@@ -45,7 +45,7 @@ export function StaffScreen() {
       selectedIndex,
       coatings,
       brief,
-      demoSingleTarget: singleTarget,
+      demoSingleTarget: lensType === "single" ? singleTarget : undefined,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

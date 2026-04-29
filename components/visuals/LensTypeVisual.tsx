@@ -96,7 +96,11 @@ export function LensTypeVisual({ lensType, singleTarget }: Props) {
               />
             )}
             <SceneLabel id={s.id} />
-            <StatusChip tone={stat.tone} label={stat.label} />
+            <StatusChip
+              tone={stat.tone}
+              label={stat.label}
+              isLast={i === SCENES.length - 1}
+            />
           </div>
         );
       })}
@@ -123,7 +127,11 @@ export function LensTypeVisual({ lensType, singleTarget }: Props) {
   );
 }
 
-function StatusChip({ tone, label }: SceneStatus) {
+function StatusChip({
+  tone,
+  label,
+  isLast,
+}: SceneStatus & { isLast?: boolean }) {
   const styles =
     tone === "clear"
       ? "bg-accent-mint text-white"
@@ -131,9 +139,10 @@ function StatusChip({ tone, label }: SceneStatus) {
         ? "bg-amber-400 text-ink-900"
         : "bg-white/20 text-white";
   const icon = tone === "clear" ? "✓" : tone === "soft" ? "!" : "✕";
+  const bottomMobile = isLast ? "bottom-10" : "bottom-2";
   return (
     <div
-      className={`absolute right-2 bottom-2 sm:right-3 sm:bottom-3 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-[13px] font-bold tracking-tight backdrop-blur shadow-soft ${styles}`}
+      className={`absolute right-2 ${bottomMobile} sm:right-3 sm:bottom-3 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-[13px] font-bold tracking-tight backdrop-blur shadow-soft ${styles}`}
     >
       <span className="mr-1">{icon}</span>
       {label}
