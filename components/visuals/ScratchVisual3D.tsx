@@ -40,7 +40,10 @@ export function ScratchVisual3D() {
   };
 
   return (
-    <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card bg-gradient-to-br from-[#F5F8FC] via-white to-[#EBF1F8] select-none">
+    <div
+      className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card bg-gradient-to-br from-[#F5F8FC] via-white to-[#EBF1F8] select-none touch-none"
+      style={{ touchAction: "none" }}
+    >
       <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-ink-900 text-white text-[10px] sm:text-xs font-bold tracking-wider uppercase">
         스크래치 보호 체험
       </div>
@@ -54,7 +57,7 @@ export function ScratchVisual3D() {
         camera={{ position: [0, 5.5, 9.5], fov: 32, near: 0.1, far: 100 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        style={{ background: "transparent" }}
+        style={{ background: "transparent", touchAction: "none" }}
       >
         <ambientLight intensity={0.55} />
         <directionalLight position={[10, 12, 8]} intensity={1.0} color="#FFFFFF" />
@@ -87,25 +90,25 @@ export function ScratchVisual3D() {
         </div>
       </div>
 
-      {/* hint + reset */}
-      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-        <motion.div
-          animate={hasInteracted ? { opacity: 0.5 } : { opacity: 1 }}
-          className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-ink-900/85 backdrop-blur text-white text-[10px] sm:text-[11px] font-medium whitespace-nowrap"
-        >
-          렌즈 위를 손가락으로 긁어보세요
-        </motion.div>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={reset}
-          className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white border border-ink-100 text-ink-600 text-[10px] sm:text-[11px] font-semibold shadow-soft"
-        >
-          초기화
-        </motion.button>
-      </div>
+      {/* hint pill — bottom-left */}
+      <motion.div
+        animate={hasInteracted ? { opacity: 0.5 } : { opacity: 1 }}
+        className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-ink-900/85 backdrop-blur text-white text-[10px] sm:text-[11px] font-medium whitespace-nowrap shadow-soft"
+      >
+        렌즈를 손가락으로 긁어보세요
+      </motion.div>
 
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 text-ink-300 text-[9px] font-medium tracking-wide pointer-events-none">
-        * 코팅이 모든 충격을 막지는 않으며, 강한 마찰엔 손상될 수 있습니다
+      {/* reset — bottom-right (separated from hint to avoid mobile row wrap) */}
+      <motion.button
+        whileTap={{ scale: 0.96 }}
+        onClick={reset}
+        className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white border border-ink-100 text-ink-600 text-[10px] sm:text-[11px] font-semibold shadow-soft"
+      >
+        초기화
+      </motion.button>
+
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 text-ink-300 text-[8px] sm:text-[9px] font-medium tracking-wide pointer-events-none whitespace-nowrap">
+        * 강한 마찰엔 손상될 수 있어요
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "framer-motion";
-import { INDEXES, type IndexId } from "@/lib/data";
+import { type IndexId } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -21,18 +21,23 @@ const VIEW_LABELS: Record<View, string> = {
   side: "측면",
 };
 
-// Pulled back ~50 % from the original framing because mobile/tablet
-// viewports were rendering the lens too large — overlays (tabs at top,
-// edge-thickness HUD at right) clipped into it. Larger margin now leaves
-// room for the chrome on every view, including mobile portrait widths.
+// Pulled in slightly from the previous framing so the lens reads larger
+// without crowding the chrome. The 4-index strip used to live at the
+// bottom and forced extra margin; now that it's gone we can let the
+// model breathe a little closer to the camera.
 const VIEW_POSITIONS: Record<View, [number, number, number]> = {
-  front: [0, 0, 108],
-  oblique: [72, 32, 72],
-  side: [108, 0, 0],
+  front: [0, 0, 90],
+  oblique: [60, 28, 60],
+  side: [90, 0, 0],
 };
 
 const RADIUS_MM = 15;
 const CENTER_MM = 1.5;
+
+// Real-world reference thicknesses (mm), used so users can ground "4mm"
+// against an object they hold every day.
+const CARD_MM = 0.76; // standard credit/check card
+const COIN_MM = 2.05; // 500원 동전
 
 function computeEdgeMM(prescription: number, thicknessFactor: number): number {
   const baseEdge = CENTER_MM + Math.abs(prescription) * 0.8;
@@ -111,15 +116,68 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
         {index} · {VIEW_LABELS[view]}
       </div>
 
-      {/* 4-index comparison strip + ghost legend */}
-      <ComparisonStrip
-        prescription={prescription}
-        currentIndex={index}
-        showGhost={showGhost}
-      />
+      {/* edge thickness HUD — right side */}
+      <div className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center px-2 sm:px-2.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
+        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/55">
+          가장자리
+        </span>
+        <span className="text-white text-base sm:text-xl font-bold font-num leading-none mt-1">
+          {edgeMM.toFixed(1)}
+        </span>
+        <span className="text-[9px] sm:text-[10px] text-white/55 leading-none mt-0.5">
+          mm
+        </span>
+      </div>
+
+      {/* real-world reference — bottom-left */}
+      <RealWorldReference edgeMM={edgeMM} />
 
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-white/40 text-[9px] font-medium tracking-wide pointer-events-none">
         * 개념 시뮬레이션 — 정확한 두께는 매장 검안 후 확인됩니다
+      </div>
+    </div>
+  );
+}
+
+// Anchors the abstract "X.X mm" number to objects users handle daily so
+// the thickness becomes felt, not just read.
+function RealWorldReference({ edgeMM }: { edgeMM: number }) {
+  const cardCount = Math.max(1, Math.round(edgeMM / CARD_MM));
+  const coinCount = Math.max(1, Math.round(edgeMM / COIN_MM));
+  const cardBars = Math.min(cardCount, 6);
+
+  return (
+    <div className="absolute bottom-5 sm:bottom-7 left-2.5 sm:left-4 z-10 flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/10">
+      <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/55 hidden sm:inline">
+        체감
+      </span>
+      <span className="text-white/30 hidden sm:inline">·</span>
+      <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-[1.5px]">
+          {Array.from({ length: cardBars }).map((_, i) => (
+            <div
+              key={i}
+              className="w-3 sm:w-3.5 h-[1.5px] bg-white/55 rounded-[1px]"
+            />
+          ))}
+        </div>
+        <span className="text-[10px] sm:text-xs text-white/80">
+          신용카드 약 {cardCount}장
+        </span>
+      </div>
+      <span className="text-white/30">·</span>
+      <div className="flex items-center gap-1">
+        <div className="flex flex-col gap-[1px]">
+          {Array.from({ length: Math.min(coinCount, 4) }).map((_, i) => (
+            <div
+              key={i}
+              className="w-2 h-[3px] sm:h-[3.5px] bg-amber-200/70 rounded-full"
+            />
+          ))}
+        </div>
+        <span className="text-[10px] sm:text-xs text-white/80">
+          500원 동전 {coinCount}개
+        </span>
       </div>
     </div>
   );
@@ -340,78 +398,4 @@ function applyEdgeToGeometry(
     positions.setY(i, item.alpha + item.beta * edgeMM);
   }
   positions.needsUpdate = true;
-}
-
-function ComparisonStrip({
-  prescription,
-  currentIndex,
-  showGhost,
-}: {
-  prescription: number;
-  currentIndex: IndexId;
-  showGhost: boolean;
-}) {
-  const items = INDEXES.map((idx) => ({
-    id: idx.id,
-    edgeMM: computeEdgeMM(prescription, idx.thicknessFactor),
-  }));
-  const maxEdge = Math.max(...items.map((i) => i.edgeMM));
-
-  return (
-    <div className="absolute bottom-4 sm:bottom-5 left-2.5 sm:left-4 right-2.5 sm:right-4 z-10 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
-      <div className="flex items-center justify-between mb-1 sm:mb-1.5 gap-2">
-        <div className="min-w-0 truncate text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-white/55">
-          가장자리 비교 · 도수 {prescription.toFixed(2)}D 기준
-        </div>
-        {showGhost && (
-          <div className="flex items-center gap-1 shrink-0 text-[8px] sm:text-[9px] text-white/55">
-            <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm border border-white/45 bg-white/10" />
-            1.56 기준선
-          </div>
-        )}
-      </div>
-      <div className="space-y-0.5 sm:space-y-1">
-        {items.map((item) => {
-          const active = item.id === currentIndex;
-          const w = (item.edgeMM / maxEdge) * 100;
-          return (
-            <div
-              key={item.id}
-              className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs"
-            >
-              <span
-                className={cn(
-                  "font-bold w-9 sm:w-11 shrink-0 font-num",
-                  active ? "text-white" : "text-white/55"
-                )}
-              >
-                {item.id}
-              </span>
-              <div className="flex-1 h-1.5 sm:h-2 bg-white/8 rounded-full overflow-hidden">
-                <motion.div
-                  className={cn(
-                    "h-full rounded-full",
-                    active
-                      ? "bg-gradient-to-r from-brand to-purple-400"
-                      : "bg-white/30"
-                  )}
-                  initial={false}
-                  animate={{ width: `${w}%` }}
-                  transition={{ type: "spring", stiffness: 200, damping: 24 }}
-                />
-              </div>
-              <span
-                className={cn(
-                  "font-num font-semibold w-11 sm:w-14 text-right shrink-0",
-                  active ? "text-white" : "text-white/55"
-                )}
-              >
-                {item.edgeMM.toFixed(1)}mm
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
