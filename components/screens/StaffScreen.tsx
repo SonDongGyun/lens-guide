@@ -100,7 +100,7 @@ export function StaffScreen() {
               transition={{ delay: 0.55 }}
               className="mt-6 text-headline tracking-tight text-ink-900"
             >
-              직원에게 결과가 전달됐어요
+              직원 상담용 결과가 준비됐어요
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 6 }}
@@ -108,7 +108,7 @@ export function StaffScreen() {
               transition={{ delay: 0.65 }}
               className="mt-2 text-ink-500 text-balance"
             >
-              잠시만 기다려주세요. 곧 직원이 이어서 상담을 도와드릴게요.
+              이 화면을 직원에게 보여주시면 이어서 상담을 도와드려요.
             </motion.p>
           </div>
 
