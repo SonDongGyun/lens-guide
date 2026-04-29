@@ -17,18 +17,35 @@ const ThicknessVisual3D = dynamic(
   { ssr: false, loading: () => <Skeleton /> }
 );
 
+// Module-scope cache: persists the 3D-support decision across mounts within the
+// same session so that once we fall back to 2D (WebGL absent or canvas threw at
+// runtime), we never re-attempt the 3D path until the page reloads.
+let cachedSupports3D: boolean | null = null;
+
 export function ThicknessVisual(props: Props) {
-  const [supports3D, setSupports3D] = useState<boolean | null>(null);
+  const [supports3D, setSupports3D] = useState<boolean | null>(
+    () => cachedSupports3D
+  );
 
   useEffect(() => {
-    setSupports3D(detectWebGL());
+    if (cachedSupports3D === null) {
+      const detected = detectWebGL();
+      cachedSupports3D = detected;
+      setSupports3D(detected);
+    }
   }, []);
 
   if (supports3D === null) return <Skeleton />;
   if (!supports3D) return <ThicknessVisual2D {...props} />;
 
   return (
-    <ThreeBoundary fallback={<ThicknessVisual2D {...props} />}>
+    <ThreeBoundary
+      fallback={<ThicknessVisual2D {...props} />}
+      onError={() => {
+        cachedSupports3D = false;
+        setSupports3D(false);
+      }}
+    >
       <ThicknessVisual3D {...props} />
     </ThreeBoundary>
   );
@@ -61,7 +78,7 @@ function Skeleton() {
 }
 
 class ThreeBoundary extends Component<
-  { children: ReactNode; fallback: ReactNode },
+  { children: ReactNode; fallback: ReactNode; onError?: () => void },
   { hasError: boolean }
 > {
   state = { hasError: false };
@@ -74,6 +91,7 @@ class ThreeBoundary extends Component<
     if (typeof console !== "undefined") {
       console.warn("ThicknessVisual3D failed, falling back to 2D:", error);
     }
+    this.props.onError?.();
   }
 
   render() {

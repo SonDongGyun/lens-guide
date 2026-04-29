@@ -158,6 +158,8 @@ function Frame({ radiusMM }: { radiusMM: number }) {
   );
 }
 
+type ProfileItem = { r: number; alpha: number; beta: number };
+
 function Lens({
   edgeMM,
   centerMM,
@@ -169,34 +171,47 @@ function Lens({
 }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const currentEdgeRef = useRef(edgeMM);
+  const settledRef = useRef(true);
 
-  const initialGeo = useMemo(
-    () => buildLatheGeometry(centerMM, edgeMM, radiusMM),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+  const profileSpec = useMemo(
+    () => buildProfileSpec(centerMM, radiusMM),
+    [centerMM, radiusMM]
   );
 
-  useFrame(() => {
-    const cur = currentEdgeRef.current;
-    const diff = edgeMM - cur;
-    if (Math.abs(diff) < 0.005) {
-      if (cur !== edgeMM) currentEdgeRef.current = edgeMM;
-      return;
-    }
-    const next = cur + diff * 0.12;
-    currentEdgeRef.current = next;
-    if (meshRef.current) {
-      const old = meshRef.current.geometry;
-      meshRef.current.geometry = buildLatheGeometry(centerMM, next, radiusMM);
-      old.dispose();
-    }
-  });
+  const initialGeo = useMemo(() => {
+    const points = specToPoints(profileSpec, edgeMM);
+    const geo = new THREE.LatheGeometry(points, 64);
+    return geo;
+    // edgeMM only seeds the first frame; later changes flow through useFrame
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileSpec]);
 
   useEffect(() => {
     return () => {
-      if (meshRef.current?.geometry) meshRef.current.geometry.dispose();
+      initialGeo.dispose();
     };
-  }, []);
+  }, [initialGeo]);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+    const geo = meshRef.current.geometry as THREE.LatheGeometry;
+    const cur = currentEdgeRef.current;
+    const diff = edgeMM - cur;
+
+    if (Math.abs(diff) < 0.005) {
+      if (!settledRef.current) {
+        currentEdgeRef.current = edgeMM;
+        applyEdgeToGeometry(geo, profileSpec, edgeMM);
+        geo.computeVertexNormals();
+        settledRef.current = true;
+      }
+      return;
+    }
+    settledRef.current = false;
+    const next = cur + diff * 0.12;
+    currentEdgeRef.current = next;
+    applyEdgeToGeometry(geo, profileSpec, next);
+  });
 
   return (
     <mesh ref={meshRef} geometry={initialGeo} rotation={[Math.PI / 2, 0, 0]}>
@@ -247,35 +262,52 @@ function RimHighlight({ edgeMM, radiusMM }: { edgeMM: number; radiusMM: number }
   );
 }
 
-function buildLatheGeometry(
+function buildProfileSpec(
   centerMM: number,
-  edgeMM: number,
   radiusMM: number,
-  segments = 28
-): THREE.LatheGeometry {
-  const points: THREE.Vector2[] = [];
-  const c = centerMM;
-  const e = edgeMM;
-
+  segments = 28,
+  rimSubdivisions = 4
+): ProfileItem[] {
+  const items: ProfileItem[] = [];
+  const cHalf = centerMM / 2;
+  // Front face: y = (c/2)(1 - tt) + (e/2) tt → α = (c/2)(1-tt), β = tt/2
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const tt = t * t * (3 - 2 * t);
-    const x = t * radiusMM;
-    const y = c / 2 + (e / 2 - c / 2) * tt;
-    points.push(new THREE.Vector2(x, y));
+    items.push({ r: t * radiusMM, alpha: cHalf * (1 - tt), beta: tt / 2 });
   }
-  const rimSubdivisions = 4;
+  // Outer rim: y goes from +e/2 to -e/2 → α = 0, β = 0.5 - t
   for (let i = 1; i <= rimSubdivisions; i++) {
     const t = i / rimSubdivisions;
-    points.push(new THREE.Vector2(radiusMM, e / 2 - t * e));
+    items.push({ r: radiusMM, alpha: 0, beta: 0.5 - t });
   }
+  // Back face: y = -(c/2)(1-tt) - (e/2) tt → α = -(c/2)(1-tt), β = -tt/2
   for (let i = 1; i <= segments; i++) {
     const t = i / segments;
     const tt = t * t * (3 - 2 * t);
-    const x = radiusMM * (1 - t);
-    const y = -e / 2 + (-c / 2 - (-e / 2)) * tt;
-    points.push(new THREE.Vector2(x, y));
+    items.push({ r: radiusMM * (1 - t), alpha: -cHalf * (1 - tt), beta: -tt / 2 });
   }
+  return items;
+}
 
-  return new THREE.LatheGeometry(points, 64);
+function specToPoints(spec: ProfileItem[], edgeMM: number): THREE.Vector2[] {
+  return spec.map((p) => new THREE.Vector2(p.r, p.alpha + p.beta * edgeMM));
+}
+
+// LatheGeometry vertex layout: outer loop = angle (segments+1), inner loop = profile.length.
+// r is constant for a given profile index, so only Y needs updating when edge changes.
+function applyEdgeToGeometry(
+  geometry: THREE.LatheGeometry,
+  spec: ProfileItem[],
+  edgeMM: number
+): void {
+  const positions = geometry.attributes.position;
+  const profileCount = spec.length;
+  const total = positions.count;
+  for (let i = 0; i < total; i++) {
+    const j = i % profileCount;
+    const item = spec[j];
+    positions.setY(i, item.alpha + item.beta * edgeMM);
+  }
+  positions.needsUpdate = true;
 }
