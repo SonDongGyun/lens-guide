@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, type ReactNode } from "react";
 import type { CoatingId } from "@/lib/data";
+import { cn } from "@/lib/utils";
 
 interface Props {
   id: CoatingId;
@@ -56,13 +57,14 @@ function CompareView({ id }: { id: CompareCoatingId }) {
     <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card select-none">
       <SceneCompose id={id} after />
 
+      {/* BEFORE layer shares the card's coordinate frame; clip-path reveals
+          0..split% of the card so element positions stay aligned with AFTER
+          even at extreme slider positions. */}
       <div
-        className="absolute inset-y-0 left-0 overflow-hidden"
-        style={{ width: `${split}%` }}
+        className="absolute inset-0"
+        style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
       >
-        <div className="relative w-screen max-w-none h-full">
-          <SceneCompose id={id} after={false} />
-        </div>
+        <SceneCompose id={id} after={false} />
       </div>
 
       <motion.div
@@ -398,6 +400,8 @@ function AREffect({ after }: EffectProps) {
 
 /* =============================== BLUE LIGHT =============================== */
 
+// Document-editor mockup — looks like everyday office work, not a dev tool,
+// so the blue-light story reads to general customers.
 function BlueBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-gradient-to-b from-[#080F1C] via-[#0A1426] to-[#0F1A30]">
@@ -411,41 +415,89 @@ function BlueBackground() {
       />
 
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[64%] h-[72%] rounded-xl bg-[#0E1322] p-[5px] shadow-[0_0_60px_rgba(80,140,255,0.45)]">
-        <div
-          className="relative w-full h-full rounded-md overflow-hidden"
-          style={{
-            background:
-              "linear-gradient(155deg, #1B335E 0%, #14264E 60%, #102046 100%)",
-          }}
-        >
-          <div className="absolute left-0 top-0 bottom-0 w-[20%] bg-[#0F1F40]/85" />
-          <div className="absolute left-0 top-0 bottom-0 w-[20%]">
-            <div className="px-2 pt-3 flex flex-col gap-1.5">
-              {[68, 50, 56, 44, 60, 38, 52, 46].map((w, i) => (
+        <div className="relative w-full h-full rounded-md overflow-hidden bg-[#F4F6FA]">
+          {/* Toolbar */}
+          <div className="absolute inset-x-0 top-0 h-[10%] bg-[#EFF2F7] border-b border-[#DDE2EA] flex items-center px-3 gap-2.5">
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#C4CAD3]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#C4CAD3]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#C4CAD3]" />
+            </div>
+            <div className="ml-2 flex gap-2">
+              {[18, 14, 14, 14, 14].map((w, i) => (
                 <div
                   key={i}
-                  className="h-1.5 rounded-sm"
+                  className="h-[3px] rounded-sm"
+                  style={{ width: w, background: "rgba(80,95,115,0.42)" }}
+                />
+              ))}
+            </div>
+            <div className="ml-auto flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-sm"
+                  style={{ background: "rgba(80,95,115,0.20)" }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Sidebar (document tree) */}
+          <div className="absolute left-0 top-[10%] bottom-0 w-[18%] bg-[#E8ECF2] border-r border-[#D6DCE4]">
+            <div className="px-2 pt-3 flex flex-col gap-1.5">
+              {[
+                { w: 60, indent: 0, active: false },
+                { w: 70, indent: 1, active: false },
+                { w: 56, indent: 1, active: true },
+                { w: 64, indent: 0, active: false },
+                { w: 50, indent: 1, active: false },
+                { w: 60, indent: 1, active: false },
+                { w: 44, indent: 1, active: false },
+                { w: 56, indent: 0, active: false },
+                { w: 48, indent: 1, active: false },
+              ].map((row, i) => (
+                <div
+                  key={i}
+                  className="h-1 rounded-sm"
                   style={{
-                    width: `${w}%`,
-                    background:
-                      i === 2 ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.18)",
+                    width: `${row.w}%`,
+                    marginLeft: `${row.indent * 12}%`,
+                    background: row.active
+                      ? "rgba(70,105,160,0.55)"
+                      : "rgba(60,75,100,0.28)",
                   }}
                 />
               ))}
             </div>
           </div>
 
-          <div className="absolute right-3 left-[24%] top-3 flex flex-col gap-[5px]">
-            <CodeRow tokens={[[8, "violet"], [18, "cyan"], [5, "white"], [22, "amber"]]} />
-            <CodeRow indent={6} tokens={[[10, "blue"], [3, "white"], [30, "emerald"]]} />
-            <CodeRow indent={6} tokens={[[12, "cyan"], [3, "white"], [22, "pink"], [5, "white"]]} />
-            <CodeRow indent={12} tokens={[[8, "blue"], [26, "emerald"]]} />
-            <div className="h-1.5" />
-            <CodeRow tokens={[[10, "violet"], [14, "amber"], [18, "white"]]} />
-            <CodeRow indent={6} tokens={[[8, "blue"], [4, "white"], [24, "emerald"]]} />
-            <CodeRow indent={12} tokens={[[10, "cyan"], [3, "white"], [16, "pink"]]} />
-            <CodeRow indent={12} tokens={[[6, "blue"], [30, "white"]]} />
-            <CodeRow indent={6} tokens={[[12, "violet"]]} />
+          {/* Document page */}
+          <div className="absolute left-[20%] right-[2%] top-[12%] bottom-[2%] bg-white rounded-sm shadow-[0_2px_6px_rgba(0,0,0,0.05)] overflow-hidden">
+            <div className="px-5 pt-5 flex flex-col gap-[4px]">
+              <div className="h-2 w-[55%] rounded-sm bg-[#3A4554] mb-1" />
+              <div className="h-1.5 w-[35%] rounded-sm bg-[#9DA7B5] mb-2.5" />
+              {[
+                { w: 88 }, { w: 92 }, { w: 84 }, { w: 90 }, { w: 76 },
+                { w: 0 },
+                { w: 90 }, { w: 86 }, { w: 92 }, { w: 78 }, { w: 88 },
+                { w: 0 },
+                { w: 84 }, { w: 90 },
+              ].map((row, i) =>
+                row.w === 0 ? (
+                  <div key={i} className="h-1.5" />
+                ) : (
+                  <div
+                    key={i}
+                    className="h-1 rounded-sm"
+                    style={{
+                      width: `${row.w}%`,
+                      background: "rgba(80,95,115,0.30)",
+                    }}
+                  />
+                )
+              )}
+            </div>
           </div>
 
           <div
@@ -467,36 +519,6 @@ function BlueBackground() {
         aria-hidden
         className="absolute left-1/2 top-[91.5%] -translate-x-1/2 w-[18%] h-[1.6%] rounded-sm bg-[#0E1322]"
       />
-    </div>
-  );
-}
-
-const TOKEN_COLOR: Record<string, string> = {
-  violet: "rgba(196,170,255,0.65)",
-  cyan: "rgba(170,235,255,0.65)",
-  blue: "rgba(150,190,255,0.65)",
-  amber: "rgba(255,215,150,0.62)",
-  emerald: "rgba(160,235,200,0.6)",
-  pink: "rgba(255,180,210,0.55)",
-  white: "rgba(255,255,255,0.32)",
-};
-
-function CodeRow({
-  tokens,
-  indent = 0,
-}: {
-  tokens: [number, string][];
-  indent?: number;
-}) {
-  return (
-    <div className="flex gap-1.5" style={{ paddingLeft: `${indent * 6}px` }}>
-      {tokens.map(([w, color], i) => (
-        <div
-          key={i}
-          className="h-1.5 rounded-sm"
-          style={{ width: `${w}%`, background: TOKEN_COLOR[color] }}
-        />
-      ))}
     </div>
   );
 }
@@ -736,87 +758,138 @@ function HydroSmears() {
 }
 
 /* =============================== SCRATCH =============================== */
-// Static explainer instead of a slider — magical disappearance of
-// scratches under a slider would overpromise.
+
+type LayerId = "surface" | "hardcoat" | "substrate";
+type ScenarioId = "wipe" | "desk" | "bag";
+type ScratchSelection =
+  | { kind: "scenario"; id: ScenarioId }
+  | { kind: "layer"; id: LayerId };
+
+const SCRATCH_LAYERS: Record<LayerId, { name: string; role: string }> = {
+  surface: {
+    name: "표면 외층",
+    role: "가장 바깥에서 일상의 마찰을 먼저 받아내는 얇은 막입니다. 매일 닦을 때 생기는 미세한 잔기스가 가장 먼저 자리잡는 위치이기도 합니다.",
+  },
+  hardcoat: {
+    name: "하드코트",
+    role: "이 코팅의 핵심층. 표면 경도를 높여 같은 마찰·충격에서도 흠집이 덜 깊게 들어가도록 도와줍니다.",
+  },
+  substrate: {
+    name: "렌즈 본체",
+    role: "시력 교정을 담당하는 광학 본체. 본체가 직접 긁히면 시야 왜곡이 남기 때문에, 위 두 층이 마찰을 먼저 받아내도록 설계되어 있습니다.",
+  },
+};
+
+const SCRATCH_SCENARIOS: Record<
+  ScenarioId,
+  { label: string; layer: LayerId; body: string }
+> = {
+  wipe: {
+    label: "안경닦이 반복",
+    layer: "surface",
+    body: "매일 닦으면 미세 먼지와 천 사이의 작은 마찰이 누적됩니다. 표면 외층이 이를 먼저 받아내며, 하드코트가 잔기스가 깊어지는 걸 늦춰 줍니다.",
+  },
+  desk: {
+    label: "책상에 뒤집어 둠",
+    layer: "hardcoat",
+    body: "테이블의 거친 면이나 모서리에 직접 닿는 상황. 단단한 하드코트가 충격 흠집의 깊이를 줄여 본체 손상으로 이어지는 걸 막아 줍니다.",
+  },
+  bag: {
+    label: "가방 속 마찰",
+    layer: "hardcoat",
+    body: "열쇠·동전 같은 단단한 물건과 무작위 방향으로 부딪힙니다. 하드코트가 받아내면서 본체까지 번지는 흠집의 깊이를 줄여 줍니다.",
+  },
+};
+
 function ScratchExplainer() {
+  const [selection, setSelection] = useState<ScratchSelection>({
+    kind: "scenario",
+    id: "wipe",
+  });
+
+  const activeLayer: LayerId =
+    selection.kind === "layer"
+      ? selection.id
+      : SCRATCH_SCENARIOS[selection.id].layer;
+
+  const panel =
+    selection.kind === "layer"
+      ? {
+          tag: "레이어 역할",
+          title: SCRATCH_LAYERS[selection.id].name,
+          body: SCRATCH_LAYERS[selection.id].role,
+        }
+      : {
+          tag: "일상 마찰 상황",
+          title: SCRATCH_SCENARIOS[selection.id].label,
+          body: SCRATCH_SCENARIOS[selection.id].body,
+        };
+
   return (
     <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card bg-gradient-to-br from-[#F5F8FC] via-white to-[#EBF1F8] select-none">
-      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-ink-900 text-white text-xs font-bold tracking-wider uppercase">
+      <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-ink-900 text-white text-xs font-bold tracking-wider uppercase">
         표면 경도 강화
       </div>
 
-      <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-4 lg:gap-6 px-6 sm:px-8 pt-16 pb-12">
-        <div className="relative grid place-items-center">
-          <svg viewBox="0 0 420 280" className="w-full max-w-[420px] h-auto">
-            <defs>
-              <linearGradient id="substrate-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#D6E1F2" />
-                <stop offset="100%" stopColor="#B8C8E0" />
-              </linearGradient>
-            </defs>
-
-            <rect
-              x="40"
-              y="118"
-              width="340"
-              height="110"
-              rx="55"
-              fill="url(#substrate-grad)"
-              stroke="#8AA3C2"
-              strokeWidth="1.2"
-            />
-            <path
-              d="M40 118 Q 40 90 95 90 L 325 90 Q 380 90 380 118 Z"
-              fill="#3182F6"
-              opacity="0.92"
-            />
-            <path
-              d="M65 95 Q 95 80 130 80 L 290 80 Q 325 80 355 95"
-              stroke="#7B61FF"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-            />
-
-            <g fontFamily="inherit" fontSize="13" fill="#191F28">
-              <line x1="200" y1="78" x2="240" y2="40" stroke="#7B61FF" strokeWidth="1.2" />
-              <text x="244" y="38" fontWeight="700" fill="#7B61FF">
-                표면 외층
-              </text>
-
-              <line x1="120" y1="100" x2="60" y2="50" stroke="#3182F6" strokeWidth="1.2" />
-              <text x="20" y="38" fontWeight="700" fill="#3182F6">
-                하드코트
-              </text>
-              <text x="20" y="54" fontSize="11" fill="#4E5968">
-                단단한 보호층
-              </text>
-
-              <line x1="210" y1="170" x2="240" y2="252" stroke="#8AA3C2" strokeWidth="1.2" />
-              <text x="244" y="258" fontWeight="700" fill="#4E5968">
-                렌즈 본체
-              </text>
-            </g>
-          </svg>
+      <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-4 lg:gap-6 px-6 sm:px-8 pt-16 pb-12">
+        <div className="relative flex flex-col items-center justify-center">
+          <ScratchDiagram
+            activeLayer={activeLayer}
+            onSelectLayer={(id) => setSelection({ kind: "layer", id })}
+          />
+          <div className="mt-2 text-[11px] text-ink-400 text-center">
+            레이어를 탭하면 역할이 강조됩니다
+          </div>
         </div>
 
-        <div className="self-center">
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 leading-tight">
-            긁힘에 더 잘 견디는 표면
+        <div className="self-center flex flex-col">
+          <div className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold">
+            {panel.tag}
           </div>
-          <p className="mt-3 text-ink-500 leading-relaxed text-sm sm:text-[15px]">
-            렌즈 위에 단단한 하드코트 층을 올려, 일상에서 생기는 미세한 마찰을 덜 받게 만듭니다.
-          </p>
-          <ul className="mt-5 space-y-2 text-sm text-ink-700">
-            <li className="flex items-start gap-2">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
-              <span>매일 닦을 때 생기는 잔기스에 더 강함</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
-              <span>활동량이 많은 일상에 권장</span>
-            </li>
-          </ul>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${selection.kind}-${selection.id}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+              className="mt-1"
+            >
+              <div className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 leading-tight">
+                {panel.title}
+              </div>
+              <p className="mt-2 text-ink-500 leading-relaxed text-sm sm:text-[15px] min-h-[72px]">
+                {panel.body}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-4">
+            <div className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold mb-2">
+              상황 선택
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(SCRATCH_SCENARIOS) as ScenarioId[]).map((id) => {
+                const active =
+                  selection.kind === "scenario" && selection.id === id;
+                return (
+                  <motion.button
+                    key={id}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelection({ kind: "scenario", id })}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
+                      active
+                        ? "bg-ink-900 text-white border-ink-900"
+                        : "bg-white text-ink-600 border-ink-100 hover:border-ink-300"
+                    )}
+                  >
+                    {SCRATCH_SCENARIOS[id].label}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -824,5 +897,137 @@ function ScratchExplainer() {
         * 스크래치를 완전히 막지는 않으며, 거친 표면이나 강한 충격에는 손상될 수 있습니다
       </div>
     </div>
+  );
+}
+
+function ScratchDiagram({
+  activeLayer,
+  onSelectLayer,
+}: {
+  activeLayer: LayerId;
+  onSelectLayer: (id: LayerId) => void;
+}) {
+  const dimSurface = activeLayer !== "surface";
+  const dimHardcoat = activeLayer !== "hardcoat";
+  const dimSubstrate = activeLayer !== "substrate";
+
+  return (
+    <svg viewBox="0 0 420 280" className="w-full max-w-[420px] h-auto">
+      <defs>
+        <linearGradient id="substrate-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#D6E1F2" />
+          <stop offset="100%" stopColor="#B8C8E0" />
+        </linearGradient>
+      </defs>
+
+      {/* Substrate — clickable rounded rect, the lens body */}
+      <g
+        onClick={() => onSelectLayer("substrate")}
+        style={{ cursor: "pointer" }}
+      >
+        <rect
+          x="40"
+          y="118"
+          width="340"
+          height="110"
+          rx="55"
+          fill="url(#substrate-grad)"
+          stroke={dimSubstrate ? "#B8C8E0" : "#3D4A5C"}
+          strokeWidth={dimSubstrate ? 1.2 : 2.4}
+          opacity={dimSubstrate ? 0.55 : 1}
+        />
+      </g>
+
+      {/* Hardcoat — clickable arch on top of the substrate */}
+      <g
+        onClick={() => onSelectLayer("hardcoat")}
+        style={{ cursor: "pointer" }}
+      >
+        <path
+          d="M40 118 Q 40 90 95 90 L 325 90 Q 380 90 380 118 Z"
+          fill="#3182F6"
+          opacity={dimHardcoat ? 0.42 : 0.95}
+          stroke={dimHardcoat ? "transparent" : "#0C5BD6"}
+          strokeWidth="2"
+        />
+      </g>
+
+      {/* Surface — thin top line; transparent rect enlarges the click target */}
+      <g
+        onClick={() => onSelectLayer("surface")}
+        style={{ cursor: "pointer" }}
+      >
+        <rect x="40" y="68" width="340" height="26" fill="transparent" />
+        <path
+          d="M65 95 Q 95 80 130 80 L 290 80 Q 325 80 355 95"
+          stroke={dimSurface ? "rgba(123,97,255,0.45)" : "#7B61FF"}
+          strokeWidth={dimSurface ? 3 : 5}
+          fill="none"
+          strokeLinecap="round"
+        />
+      </g>
+
+      {/* Labels */}
+      <g fontFamily="inherit" fontSize="13" fill="#191F28">
+        <line
+          x1="200"
+          y1="78"
+          x2="240"
+          y2="40"
+          stroke={dimSurface ? "rgba(123,97,255,0.4)" : "#7B61FF"}
+          strokeWidth={dimSurface ? 1.2 : 1.6}
+        />
+        <text
+          x="244"
+          y="38"
+          fontWeight="700"
+          fill={dimSurface ? "rgba(123,97,255,0.55)" : "#7B61FF"}
+        >
+          표면 외층
+        </text>
+
+        <line
+          x1="120"
+          y1="100"
+          x2="60"
+          y2="50"
+          stroke={dimHardcoat ? "rgba(49,130,246,0.4)" : "#3182F6"}
+          strokeWidth={dimHardcoat ? 1.2 : 1.6}
+        />
+        <text
+          x="20"
+          y="38"
+          fontWeight="700"
+          fill={dimHardcoat ? "rgba(49,130,246,0.55)" : "#3182F6"}
+        >
+          하드코트
+        </text>
+        <text
+          x="20"
+          y="54"
+          fontSize="11"
+          fill={dimHardcoat ? "rgba(78,89,104,0.55)" : "#4E5968"}
+        >
+          단단한 보호층
+        </text>
+
+        <line
+          x1="210"
+          y1="170"
+          x2="240"
+          y2="252"
+          stroke={dimSubstrate ? "rgba(138,163,194,0.5)" : "#3D4A5C"}
+          strokeWidth={dimSubstrate ? 1.2 : 1.6}
+        />
+        <text
+          x="244"
+          y="258"
+          fontWeight="700"
+          fill={dimSubstrate ? "rgba(78,89,104,0.55)" : "#191F28"}
+        >
+          렌즈 본체
+        </text>
+      </g>
+    </svg>
   );
 }
