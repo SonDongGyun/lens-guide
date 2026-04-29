@@ -1,14 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
+import { useState, type ReactNode } from "react";
 import type { CoatingId } from "@/lib/data";
-import { useState } from "react";
 
 interface Props {
   id: CoatingId;
 }
 
 type CompareCoatingId = Exclude<CoatingId, "scratch">;
+type EffectProps = { after: boolean };
 
 const COMPARE_LABELS: Record<
   CompareCoatingId,
@@ -36,8 +38,11 @@ const COMPARE_LABELS: Record<
   },
 };
 
-// Scratch protection uses a static explainer rather than a before/after
-// slider — magical disappearance of scratches would overpromise.
+// Drop a static-imported image here per coating to swap the SVG/CSS
+// background for a real photo or render. SceneBackground will pick it
+// up automatically; the effect layer above stays untouched.
+const BACKGROUND_ASSETS: Partial<Record<CompareCoatingId, string>> = {};
+
 export function CoatingDemo({ id }: Props) {
   if (id === "scratch") return <ScratchExplainer />;
   return <CompareView id={id} />;
@@ -49,19 +54,19 @@ function CompareView({ id }: { id: CompareCoatingId }) {
 
   return (
     <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card select-none">
-      <Scene id={id} after />
+      <SceneCompose id={id} after />
 
       <div
         className="absolute inset-y-0 left-0 overflow-hidden"
         style={{ width: `${split}%` }}
       >
         <div className="relative w-screen max-w-none h-full">
-          <Scene id={id} after={false} />
+          <SceneCompose id={id} after={false} />
         </div>
       </div>
 
       <motion.div
-        className="absolute top-0 bottom-0 w-1 bg-white shadow-elevated cursor-ew-resize"
+        className="absolute top-0 bottom-0 w-1 bg-white shadow-elevated cursor-ew-resize z-20"
         style={{ left: `calc(${split}% - 2px)` }}
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
@@ -97,14 +102,14 @@ function CompareView({ id }: { id: CompareCoatingId }) {
         className="absolute bottom-3 left-1/2 -translate-x-1/2 w-1/2 accent-brand opacity-0"
       />
 
-      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur text-white text-xs font-bold tracking-wider uppercase">
+      <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur text-white text-xs font-bold tracking-wider uppercase">
         {labels.left}
       </div>
-      <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-brand text-white text-xs font-bold tracking-wider uppercase shadow-md">
+      <div className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-brand text-white text-xs font-bold tracking-wider uppercase shadow-md">
         {labels.right}
       </div>
 
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 max-w-[92%] px-2.5 py-1 rounded-full bg-black/40 backdrop-blur text-white/80 text-[10px] font-medium tracking-wide text-center">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 max-w-[92%] px-2.5 py-1 rounded-full bg-black/40 backdrop-blur text-white/80 text-[10px] font-medium tracking-wide text-center">
         {labels.disclaimer}
       </div>
 
@@ -113,88 +118,211 @@ function CompareView({ id }: { id: CompareCoatingId }) {
   );
 }
 
-function Scene({
+// Scenes are split into a Background (the world / object) and an
+// Effect (the state-dependent coating visualization). Future photo
+// or render assets replace Background; Effect stays as code.
+function SceneCompose({ id, after }: { id: CompareCoatingId; after: boolean }) {
+  return (
+    <>
+      <SceneBackground id={id} asset={BACKGROUND_ASSETS[id]} />
+      <SceneEffect id={id} after={after} />
+    </>
+  );
+}
+
+function SceneBackground({
+  id,
+  asset,
+}: {
+  id: CompareCoatingId;
+  asset?: string;
+}) {
+  if (asset) {
+    return (
+      <div className="absolute inset-0">
+        <Image
+          src={asset}
+          alt=""
+          fill
+          priority
+          sizes="(min-width:1024px) 60vw, 100vw"
+          className="object-cover"
+        />
+      </div>
+    );
+  }
+  if (id === "ar") return <ARBackground />;
+  if (id === "blue") return <BlueBackground />;
+  if (id === "photochromic") return <PhotochromicBackground />;
+  return <HydroBackground />;
+}
+
+function SceneEffect({
   id,
   after,
 }: {
   id: CompareCoatingId;
   after: boolean;
 }) {
-  if (id === "ar") return <ARScene after={after} />;
-  if (id === "blue") return <BlueScene after={after} />;
-  if (id === "photochromic") return <PhotochromicScene after={after} />;
-  return <HydroScene after={after} />;
+  if (id === "ar") return <AREffect after={after} />;
+  if (id === "blue") return <BlueEffect after={after} />;
+  if (id === "photochromic") return <PhotochromicEffect after={after} />;
+  return <HydroEffect after={after} />;
 }
 
-/* ----------------- Anti-Reflective: night driving ----------------- */
-function ARScene({ after }: { after: boolean }) {
-  // x/y are in 800x500 viewport coords; r=core disk, halo=glow radius,
-  // ray=true means render starburst spikes (only the closest headlights).
-  const lights = [
-    { cx: 358, cy: 308, r: 7, halo: 56, ray: false },
-    { cx: 442, cy: 308, r: 7, halo: 56, ray: false },
-    { cx: 314, cy: 348, r: 12, halo: 105, ray: true },
-    { cx: 486, cy: 348, r: 12, halo: 105, ray: true },
-    { cx: 70, cy: 215, r: 6, halo: 42, ray: false },
-    { cx: 730, cy: 215, r: 6, halo: 42, ray: false },
-    { cx: 200, cy: 198, r: 5, halo: 28, ray: false },
-    { cx: 600, cy: 198, r: 5, halo: 28, ray: false },
-  ];
+/* =============================== AR =============================== */
 
+const AR_LIGHTS = [
+  { cx: 358, cy: 308, r: 7, halo: 56, ray: false },
+  { cx: 442, cy: 308, r: 7, halo: 56, ray: false },
+  { cx: 314, cy: 348, r: 11, halo: 105, ray: true },
+  { cx: 486, cy: 348, r: 11, halo: 105, ray: true },
+  { cx: 70, cy: 215, r: 6, halo: 42, ray: false },
+  { cx: 730, cy: 215, r: 6, halo: 42, ray: false },
+  { cx: 200, cy: 198, r: 5, halo: 28, ray: false },
+  { cx: 600, cy: 198, r: 5, halo: 28, ray: false },
+];
+
+function ARBackground() {
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#080E1E] via-[#0F1830] to-[#1A2240] overflow-hidden">
+    <div className="absolute inset-0 overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, #050A1A 0%, #0A1224 32%, #131A36 58%, #1F2348 76%, #2A2440 88%, #36262E 100%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-x-0"
+        style={{
+          top: "44%",
+          height: "16%",
+          background:
+            "linear-gradient(180deg, rgba(220,140,80,0.16) 0%, rgba(140,80,60,0.10) 50%, transparent 100%)",
+          filter: "blur(10px)",
+        }}
+      />
+
       <svg
         viewBox="0 0 800 500"
         className="absolute inset-0 w-full h-full"
         preserveAspectRatio="none"
       >
         <polygon
-          points="0,260 110,232 200,248 290,225 360,250 0,260"
-          fill="#0A1224"
-          opacity="0.9"
+          points="0,260 60,250 90,232 130,242 170,238 210,225 240,235 280,228 320,240 360,250 0,260"
+          fill="#04080F"
+          opacity="0.95"
         />
         <polygon
-          points="800,260 690,232 600,248 510,225 440,250 800,260"
-          fill="#0A1224"
-          opacity="0.9"
+          points="800,260 740,250 710,232 670,242 630,238 590,225 560,235 520,228 480,240 440,250 800,260"
+          fill="#04080F"
+          opacity="0.95"
         />
-        <polygon points="350,500 450,500 555,260 245,260" fill="#0E1626" />
-        <rect x="396" y="280" width="8" height="12" fill="#FBBF24" opacity="0.55" />
-        <rect x="394" y="318" width="12" height="18" fill="#FBBF24" opacity="0.8" />
-        <rect x="390" y="378" width="20" height="26" fill="#FBBF24" />
+        {[
+          [80, 247],
+          [108, 245],
+          [148, 248],
+          [185, 244],
+          [220, 247],
+          [252, 245],
+          [298, 248],
+          [328, 244],
+          [355, 246],
+          [478, 246],
+          [512, 244],
+          [560, 248],
+          [598, 245],
+          [638, 247],
+          [688, 244],
+          [728, 246],
+        ].map(([x, y], i) => (
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r="0.9"
+            fill="#FFE4A0"
+            opacity={0.45 + (i % 3) * 0.18}
+          />
+        ))}
+
+        <polygon points="350,500 450,500 555,260 245,260" fill="#080C18" />
+        <defs>
+          <linearGradient id="ar-asphalt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0A1020" stopOpacity="0" />
+            <stop offset="100%" stopColor="#15182A" stopOpacity="0.6" />
+          </linearGradient>
+        </defs>
+        <polygon
+          points="350,500 450,500 555,260 245,260"
+          fill="url(#ar-asphalt)"
+        />
+
+        <rect x="397" y="278" width="6" height="9" fill="#FBBF24" opacity="0.42" />
+        <rect x="395.5" y="298" width="9" height="14" fill="#FBBF24" opacity="0.62" />
+        <rect x="394" y="322" width="12" height="18" fill="#FBBF24" opacity="0.78" />
+        <rect x="392" y="352" width="16" height="22" fill="#FBBF24" opacity="0.92" />
+        <rect x="390" y="386" width="20" height="26" fill="#FBBF24" />
       </svg>
 
-      {lights.map((l, i) => (
+      {AR_LIGHTS.map((l, i) => (
         <div
           key={`core-${i}`}
-          className="absolute rounded-full bg-[#FFFAE0]"
+          className="absolute rounded-full"
           style={{
             left: `${(l.cx / 800) * 100}%`,
             top: `${(l.cy / 500) * 100}%`,
             width: l.r * 2,
             height: l.r * 2,
             transform: "translate(-50%,-50%)",
-            boxShadow: "0 0 6px rgba(255,250,210,0.6)",
+            background:
+              "radial-gradient(circle, #FFFCEC 0%, #FFF6CC 65%, #FFEDA0 100%)",
+            boxShadow: "0 0 6px rgba(255,250,210,0.55)",
           }}
         />
       ))}
+    </div>
+  );
+}
 
+function AREffect({ after }: EffectProps) {
+  return (
+    <>
       {!after &&
-        lights.map((l, i) => (
+        AR_LIGHTS.map((l, i) => (
           <div
             key={`halo-${i}`}
-            className="absolute"
+            className="absolute pointer-events-none"
             style={{
               left: `${(l.cx / 800) * 100}%`,
               top: `${(l.cy / 500) * 100}%`,
-              width: l.halo * 2,
-              height: l.halo * 2,
+              width: l.halo * 2.4,
+              height: l.halo * 2.4,
               transform: "translate(-50%,-50%)",
-              background:
-                "radial-gradient(circle, rgba(255,250,210,0.85) 0%, rgba(255,240,170,0.32) 38%, rgba(255,230,140,0) 72%)",
-              filter: "blur(3px)",
             }}
-          />
+          >
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,235,170,0.42) 0%, rgba(255,225,140,0.16) 32%, transparent 65%)",
+                filter: "blur(10px)",
+                mixBlendMode: "screen",
+              }}
+            />
+            <div
+              className="absolute inset-[18%] rounded-full"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,250,210,0.85) 0%, rgba(255,240,170,0.45) 30%, transparent 65%)",
+                filter: "blur(2.5px)",
+                mixBlendMode: "screen",
+              }}
+            />
+          </div>
         ))}
 
       {!after && (
@@ -203,188 +331,413 @@ function ARScene({ after }: { after: boolean }) {
           className="absolute inset-0 w-full h-full pointer-events-none"
           preserveAspectRatio="none"
         >
-          {lights
-            .filter((l) => l.ray)
-            .flatMap((l, i) =>
-              [0, 45, 90, 135].map((deg) => {
-                const rad = (deg * Math.PI) / 180;
-                const len = l.halo * 1.5;
-                return (
-                  <line
-                    key={`r-${i}-${deg}`}
-                    x1={l.cx - Math.cos(rad) * len}
-                    y1={l.cy - Math.sin(rad) * len}
-                    x2={l.cx + Math.cos(rad) * len}
-                    y2={l.cy + Math.sin(rad) * len}
-                    stroke="rgba(255,240,170,0.28)"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                  />
-                );
-              })
-            )}
+          {AR_LIGHTS.filter((l) => l.ray).flatMap((l, i) =>
+            [0, 30, 60, 90, 120, 150].map((deg) => {
+              const rad = (deg * Math.PI) / 180;
+              const len = l.halo * 1.45 * (0.85 + ((i + deg) % 5) * 0.06);
+              const opacity = deg % 60 === 0 ? 0.34 : 0.2;
+              return (
+                <line
+                  key={`r-${i}-${deg}`}
+                  x1={l.cx - Math.cos(rad) * len}
+                  y1={l.cy - Math.sin(rad) * len}
+                  x2={l.cx + Math.cos(rad) * len}
+                  y2={l.cy + Math.sin(rad) * len}
+                  stroke={`rgba(255,240,170,${opacity})`}
+                  strokeWidth={deg % 60 === 0 ? 1.7 : 1.1}
+                  strokeLinecap="round"
+                />
+              );
+            })
+          )}
         </svg>
       )}
 
-      {/* Ghost reflection: dashboard / interior reflecting on the lens
-          surface — the visual signature customers recognize from their
-          own glasses at night. Only present without AR coating. */}
+      {/* Ghost reflection: the dashboard / interior bouncing back off the
+          uncoated lens. Multiple layered bands suggest chromatic spread. */}
       {!after && (
-        <div
-          aria-hidden
-          className="absolute inset-x-0 top-[16%] h-[22%] pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse 50% 100% at 65% 50%, rgba(255,225,170,0.28), transparent 70%), radial-gradient(ellipse 60% 100% at 28% 60%, rgba(180,210,255,0.22), transparent 70%)",
-            filter: "blur(10px)",
-            mixBlendMode: "screen",
-          }}
-        />
+        <>
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-[14%] h-[24%] pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse 50% 100% at 65% 50%, rgba(255,225,170,0.32), transparent 70%), radial-gradient(ellipse 60% 100% at 28% 60%, rgba(180,210,255,0.26), transparent 70%)",
+              filter: "blur(12px)",
+              mixBlendMode: "screen",
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-[40%] h-[16%] pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse 35% 100% at 50% 50%, rgba(255,220,180,0.18), transparent 75%)",
+              filter: "blur(8px)",
+              mixBlendMode: "screen",
+            }}
+          />
+        </>
       )}
 
-      {/* AR coating's faint violet/green sheen near the lens periphery —
-          the actual visual signature of an AR-coated lens in photos. */}
+      {/* AR coating's faint violet/green periphery sheen — the visual
+          signature that tells you a lens has AR coating in real photos. */}
       {after && (
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 110% 75% at 50% 50%, transparent 60%, rgba(140,110,255,0.10) 80%, rgba(110,200,150,0.10) 100%)",
+              "radial-gradient(ellipse 110% 75% at 50% 50%, transparent 60%, rgba(140,110,255,0.12) 80%, rgba(110,200,150,0.13) 100%)",
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
-/* ----------------- Blue light: monitor at night ----------------- */
-// Monitor pixels and glow stay identical in both states; only a soft
-// warm overlay appears in AFTER, representing the lens filter — not a
-// physical change to the screen itself.
-function BlueScene({ after }: { after: boolean }) {
+/* =============================== BLUE LIGHT =============================== */
+
+function BlueBackground() {
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#0F1A2B] to-[#1A2540] grid place-items-center">
+    <div className="absolute inset-0 overflow-hidden bg-gradient-to-b from-[#080F1C] via-[#0A1426] to-[#0F1A30]">
       <div
-        className="relative w-[60%] h-[70%] rounded-xl border-2 border-blue-300/40"
+        aria-hidden
+        className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(160deg, rgba(120,170,255,0.65), rgba(80,140,255,0.45))",
-          boxShadow: "0 0 80px rgba(80,140,255,0.5)",
+            "radial-gradient(ellipse 55% 55% at 50% 55%, rgba(80,130,220,0.20), transparent 70%)",
         }}
-      >
-        <div className="absolute inset-3 grid grid-cols-3 gap-1.5">
-          <div className="bg-white/40 rounded" />
-          <div className="bg-white/30 rounded col-span-2" />
-          <div className="bg-white/25 rounded col-span-3 h-2" />
-          <div className="bg-white/20 rounded col-span-3" />
-          <div className="bg-white/35 rounded" />
-          <div className="bg-white/20 rounded col-span-2" />
-        </div>
-      </div>
+      />
 
-      {after && (
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[64%] h-[72%] rounded-xl bg-[#0E1322] p-[5px] shadow-[0_0_60px_rgba(80,140,255,0.45)]">
         <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "rgba(255,180,120,0.16)" }}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ----------------- Photochromic: outdoor lens darkening ----------------- */
-function PhotochromicScene({ after }: { after: boolean }) {
-  return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#FFE5A8] via-[#FFB46E] to-[#FF8E4D]">
-      <div className="absolute top-10 right-12 w-24 h-24 rounded-full bg-yellow-200 blur-2xl opacity-80" />
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b from-transparent to-[#0E1626]/30" />
-      <svg viewBox="0 0 800 500" className="absolute bottom-0 w-full h-2/3">
-        <polygon
-          points="0,500 250,180 400,300 600,140 800,500"
-          fill="rgba(40,70,40,0.6)"
-        />
-      </svg>
-      {after && (
-        <div
-          className="absolute inset-0 transition-opacity"
+          className="relative w-full h-full rounded-md overflow-hidden"
           style={{
             background:
-              "linear-gradient(180deg, rgba(80,40,20,0.45), rgba(40,30,15,0.55))",
-            mixBlendMode: "multiply",
+              "linear-gradient(155deg, #1B335E 0%, #14264E 60%, #102046 100%)",
           }}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ----------------- Hydrophobic: water beads ----------------- */
-function HydroScene({ after }: { after: boolean }) {
-  return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#7B9BC5] via-[#5C7FB0] to-[#3F5F95]">
-      <div className="absolute inset-0 grid place-items-center">
-        <div className="relative w-[55%] aspect-square rounded-full bg-white/10 border border-white/20 backdrop-blur-sm overflow-hidden">
-          {after ? (
-            <>
-              {Array.from({ length: 7 }).map((_, i) => {
-                const left = 10 + (i * 11) % 80;
-                const top = 15 + (i * 23) % 70;
-                const size = 14 + (i * 7) % 28;
-                return (
-                  <motion.div
-                    key={i}
-                    className="absolute rounded-full"
-                    style={{
-                      left: `${left}%`,
-                      top: `${top}%`,
-                      width: size,
-                      height: size,
-                      background:
-                        "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(180,210,255,0.7) 50%, rgba(120,160,210,0.4))",
-                      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-                    }}
-                    animate={{ y: [0, 10, 0] }}
-                    transition={{
-                      duration: 3 + i * 0.3,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  />
-                );
-              })}
-            </>
-          ) : (
-            <>
-              {Array.from({ length: 4 }).map((_, i) => (
+        >
+          <div className="absolute left-0 top-0 bottom-0 w-[20%] bg-[#0F1F40]/85" />
+          <div className="absolute left-0 top-0 bottom-0 w-[20%]">
+            <div className="px-2 pt-3 flex flex-col gap-1.5">
+              {[68, 50, 56, 44, 60, 38, 52, 46].map((w, i) => (
                 <div
                   key={i}
-                  className="absolute h-1.5 rounded-full bg-white/40"
+                  className="h-1.5 rounded-sm"
                   style={{
-                    left: "5%",
-                    top: `${20 + i * 18}%`,
-                    width: "85%",
-                    filter: "blur(2px)",
+                    width: `${w}%`,
+                    background:
+                      i === 2 ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.18)",
                   }}
                 />
               ))}
-              <div
-                className="absolute inset-4 rounded-full bg-white/8 mix-blend-overlay"
-                style={{ filter: "blur(8px)" }}
-              />
-            </>
-          )}
+            </div>
+          </div>
+
+          <div className="absolute right-3 left-[24%] top-3 flex flex-col gap-[5px]">
+            <CodeRow tokens={[[8, "violet"], [18, "cyan"], [5, "white"], [22, "amber"]]} />
+            <CodeRow indent={6} tokens={[[10, "blue"], [3, "white"], [30, "emerald"]]} />
+            <CodeRow indent={6} tokens={[[12, "cyan"], [3, "white"], [22, "pink"], [5, "white"]]} />
+            <CodeRow indent={12} tokens={[[8, "blue"], [26, "emerald"]]} />
+            <div className="h-1.5" />
+            <CodeRow tokens={[[10, "violet"], [14, "amber"], [18, "white"]]} />
+            <CodeRow indent={6} tokens={[[8, "blue"], [4, "white"], [24, "emerald"]]} />
+            <CodeRow indent={12} tokens={[[10, "cyan"], [3, "white"], [16, "pink"]]} />
+            <CodeRow indent={12} tokens={[[6, "blue"], [30, "white"]]} />
+            <CodeRow indent={6} tokens={[[12, "violet"]]} />
+          </div>
+
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 32%, transparent 68%, rgba(255,255,255,0.04) 100%)",
+            }}
+          />
         </div>
+      </div>
+
+      <div
+        aria-hidden
+        className="absolute left-1/2 top-[88.5%] -translate-x-1/2 w-[7%] h-[3%] bg-[#0E1322]"
+      />
+      <div
+        aria-hidden
+        className="absolute left-1/2 top-[91.5%] -translate-x-1/2 w-[18%] h-[1.6%] rounded-sm bg-[#0E1322]"
+      />
+    </div>
+  );
+}
+
+const TOKEN_COLOR: Record<string, string> = {
+  violet: "rgba(196,170,255,0.65)",
+  cyan: "rgba(170,235,255,0.65)",
+  blue: "rgba(150,190,255,0.65)",
+  amber: "rgba(255,215,150,0.62)",
+  emerald: "rgba(160,235,200,0.6)",
+  pink: "rgba(255,180,210,0.55)",
+  white: "rgba(255,255,255,0.32)",
+};
+
+function CodeRow({
+  tokens,
+  indent = 0,
+}: {
+  tokens: [number, string][];
+  indent?: number;
+}) {
+  return (
+    <div className="flex gap-1.5" style={{ paddingLeft: `${indent * 6}px` }}>
+      {tokens.map(([w, color], i) => (
+        <div
+          key={i}
+          className="h-1.5 rounded-sm"
+          style={{ width: `${w}%`, background: TOKEN_COLOR[color] }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Lens-as-vignette: warm filter strongest at the periphery, mild at the
+// center. Reads as "you're seeing this through a lens" without altering
+// the monitor itself.
+function BlueEffect({ after }: EffectProps) {
+  if (!after) return null;
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        background:
+          "radial-gradient(ellipse 130% 110% at 50% 50%, rgba(255,180,120,0.10) 0%, rgba(255,170,110,0.18) 55%, rgba(220,135,80,0.32) 100%)",
+      }}
+    />
+  );
+}
+
+/* =============================== PHOTOCHROMIC =============================== */
+
+function PhotochromicBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, #FFE5A8 0%, #FFC988 38%, #FFA86E 62%, #E8845A 80%, #B85A3E 100%)",
+        }}
+      />
+
+      <div className="absolute right-[12%] top-[10%] w-32 h-32">
+        <div
+          aria-hidden
+          className="absolute inset-[-55%] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,240,200,0.55) 0%, rgba(255,220,160,0.22) 35%, transparent 70%)",
+            filter: "blur(12px)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-[-15%] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,250,220,0.85) 0%, rgba(255,235,180,0.4) 50%, transparent 80%)",
+            filter: "blur(4px)",
+          }}
+        />
+        <div
+          className="absolute inset-0 rounded-full bg-[#FFF6D4]"
+          style={{ boxShadow: "0 0 40px rgba(255,240,200,0.9)" }}
+        />
+      </div>
+
+      <svg
+        viewBox="0 0 800 500"
+        className="absolute bottom-0 w-full h-2/3"
+        preserveAspectRatio="none"
+      >
+        <polygon
+          points="0,500 120,310 250,260 360,290 480,250 600,280 740,240 800,260 800,500"
+          fill="rgba(80,90,110,0.45)"
+        />
+        <polygon
+          points="0,500 200,260 340,310 500,200 660,275 800,235 800,500"
+          fill="rgba(60,75,80,0.62)"
+        />
+        <polygon
+          points="0,500 250,200 400,300 600,140 800,260 800,500"
+          fill="rgba(40,55,50,0.85)"
+        />
+      </svg>
+
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-1/3"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent 0%, rgba(60,40,30,0.25) 50%, rgba(20,15,10,0.5) 100%)",
+        }}
+      />
+    </div>
+  );
+}
+
+function PhotochromicEffect({ after }: EffectProps) {
+  if (!after) return null;
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        background:
+          "linear-gradient(180deg, rgba(80,40,20,0.45), rgba(40,30,15,0.55))",
+        mixBlendMode: "multiply",
+      }}
+    />
+  );
+}
+
+/* =============================== HYDROPHOBIC =============================== */
+
+function HydroDisk({ children, withFrame }: { children?: ReactNode; withFrame?: boolean }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center pointer-events-none">
+      <div
+        className={`relative w-[55%] aspect-square rounded-full overflow-hidden ${
+          withFrame
+            ? "bg-white/10 border border-white/25 backdrop-blur-sm"
+            : ""
+        }`}
+      >
+        {children}
       </div>
     </div>
   );
 }
 
-/* ----------------- Scratch: static explainer (no slider) ----------------- */
-// Lens cross-section diagram — chosen over a before/after slider so we
-// don't suggest existing scratches vanish or that the coating prevents
-// all scratches. Honest disclaimer pinned to the bottom.
+function HydroBackground() {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-b from-[#7B9BC5] via-[#5C7FB0] to-[#3F5F95]">
+      <HydroDisk withFrame>
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 30% at 35% 25%, rgba(255,255,255,0.34), transparent 70%), radial-gradient(ellipse 55% 25% at 70% 80%, rgba(255,255,255,0.10), transparent 70%)",
+          }}
+        />
+      </HydroDisk>
+    </div>
+  );
+}
+
+function HydroEffect({ after }: EffectProps) {
+  return (
+    <HydroDisk>{after ? <HydroDrops /> : <HydroSmears />}</HydroDisk>
+  );
+}
+
+function HydroDrops() {
+  const drops = [
+    { left: 18, top: 22, size: 28, delay: 0 },
+    { left: 62, top: 18, size: 22, delay: 0.5 },
+    { left: 32, top: 48, size: 36, delay: 0.2 },
+    { left: 72, top: 46, size: 18, delay: 0.8 },
+    { left: 50, top: 30, size: 14, delay: 1.1 },
+    { left: 22, top: 68, size: 24, delay: 0.4 },
+    { left: 58, top: 70, size: 30, delay: 0.7 },
+    { left: 78, top: 28, size: 16, delay: 0.9 },
+    { left: 44, top: 78, size: 20, delay: 0.3 },
+  ];
+  return (
+    <>
+      {drops.map((d, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${d.left}%`,
+            top: `${d.top}%`,
+            width: d.size,
+            height: d.size,
+            background:
+              "radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95) 0%, rgba(210,230,255,0.78) 28%, rgba(140,180,225,0.55) 60%, rgba(95,140,200,0.42) 100%)",
+            boxShadow:
+              "0 3px 8px rgba(0,0,0,0.22), inset -2px -3px 6px rgba(80,120,180,0.32), inset 2px 2px 3px rgba(255,255,255,0.4)",
+          }}
+          animate={{ y: [0, 6 + (i % 3) * 2, 0] }}
+          transition={{
+            duration: 3 + i * 0.27,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: d.delay,
+          }}
+        >
+          <div
+            aria-hidden
+            className="absolute rounded-full"
+            style={{
+              left: "20%",
+              top: "16%",
+              width: "30%",
+              height: "20%",
+              background: "rgba(255,255,255,0.85)",
+              filter: "blur(0.8px)",
+            }}
+          />
+        </motion.div>
+      ))}
+    </>
+  );
+}
+
+function HydroSmears() {
+  return (
+    <>
+      {[18, 32, 48, 62, 76].map((top, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-white/35"
+          style={{
+            left: "4%",
+            top: `${top}%`,
+            width: "88%",
+            height: 3 + (i % 3),
+            filter: "blur(3px)",
+          }}
+        />
+      ))}
+      {[18, 38, 58, 78].map((x, i) => (
+        <div
+          key={`d-${i}`}
+          className="absolute rounded-full bg-white/30"
+          style={{
+            left: `${x}%`,
+            top: "10%",
+            width: 3 + (i % 2),
+            height: "78%",
+            filter: "blur(2.5px)",
+          }}
+        />
+      ))}
+      <div
+        className="absolute inset-3 rounded-full bg-white/12"
+        style={{ filter: "blur(12px)", mixBlendMode: "overlay" }}
+      />
+    </>
+  );
+}
+
+/* =============================== SCRATCH =============================== */
+// Static explainer instead of a slider — magical disappearance of
+// scratches under a slider would overpromise.
 function ScratchExplainer() {
   return (
     <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card bg-gradient-to-br from-[#F5F8FC] via-white to-[#EBF1F8] select-none">
