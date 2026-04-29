@@ -6,6 +6,33 @@ import type {
   CoatingId,
 } from "./data";
 
+export const LENS_LABEL: Record<LensTypeId, string> = {
+  single: "단초점",
+  progressive: "누진다초점",
+  office: "오피스 렌즈",
+};
+
+export const COATING_LABEL: Record<CoatingId, string> = {
+  ar: "비반사",
+  blue: "블루라이트",
+  photochromic: "변색",
+  hydrophobic: "발수·방오",
+  scratch: "스크래치 보호",
+};
+
+/** Build a one-line brief from the customer's actual selections (single source of truth). */
+export function buildSelectionBrief(
+  lensType: LensTypeId,
+  index: IndexId,
+  coatings: CoatingId[]
+): string {
+  const coatingPart =
+    coatings.length > 0
+      ? coatings.map((c) => COATING_LABEL[c]).join("+")
+      : "코팅 미선택";
+  return `${LENS_LABEL[lensType]} · ${index} · ${coatingPart}`;
+}
+
 export interface Recommendation {
   lensType: LensTypeId;
   index: IndexId;
@@ -94,22 +121,8 @@ export function recommend({
     reasons.unshift("가장 큰 고민이 \"거리 전환\"이므로 누진 시야 체험을 먼저 진행해보시는 걸 권합니다.");
   }
 
-  const lensLabel: Record<LensTypeId, string> = {
-    single: "단초점",
-    progressive: "누진다초점",
-    office: "오피스 렌즈",
-  };
-
   const coatingList = Array.from(coatings);
-  const coatingLabel: Record<CoatingId, string> = {
-    ar: "비반사",
-    blue: "블루라이트",
-    photochromic: "변색",
-    hydrophobic: "발수·방오",
-    scratch: "스크래치 보호",
-  };
-
-  const brief = `${lensLabel[lensType]} · ${index} · ${coatingList.map((c) => coatingLabel[c]).join("+")}`;
+  const brief = buildSelectionBrief(lensType, index, coatingList);
 
   return {
     lensType,
@@ -118,9 +131,9 @@ export function recommend({
     reasons: reasons.slice(0, 4),
     brief,
     highlights: {
-      lens: lensLabel[lensType],
+      lens: LENS_LABEL[lensType],
       index,
-      coating: coatingList.map((c) => coatingLabel[c]).join(" + "),
+      coating: coatingList.map((c) => COATING_LABEL[c]).join(" + "),
     },
   };
 }

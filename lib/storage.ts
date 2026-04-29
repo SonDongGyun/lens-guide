@@ -54,10 +54,9 @@ export function saveConsultation(record: ConsultationRecord): void {
 }
 
 export function makeTicket(): string {
-  const stamp = new Date()
-    .toISOString()
-    .replace(/[-:T]/g, "")
-    .slice(2, 12); // YYMMDDHHMM
+  // YYMMDDHHMM in store-local (KST) so the ticket date matches the staff's wall clock
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const stamp = kst.toISOString().replace(/[-:T]/g, "").slice(2, 12);
   const rand = Math.floor(100 + Math.random() * 900);
   return `${stamp}-${rand}`;
 }

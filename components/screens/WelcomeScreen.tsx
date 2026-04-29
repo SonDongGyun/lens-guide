@@ -4,16 +4,40 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { useWizard } from "@/lib/store";
 import { HeroLens } from "@/components/visuals/HeroLens";
+import type { PurposeId, DiscomfortId } from "@/lib/data";
 
-const QUICK_ENTRIES: { label: string; emoji: string }[] = [
-  { label: "다초점이 궁금해요", emoji: "👓" },
-  { label: "렌즈가 너무 두꺼워요", emoji: "📏" },
-  { label: "야간 운전이 불편해요", emoji: "🌙" },
-  { label: "블루라이트 차단이 필요할까요?", emoji: "💻" },
+const QUICK_ENTRIES: {
+  label: string;
+  emoji: string;
+  purposes?: PurposeId[];
+  discomforts?: DiscomfortId[];
+}[] = [
+  { label: "다초점이 궁금해요", emoji: "👓", purposes: ["progressive_curious"] },
+  { label: "렌즈가 너무 두꺼워요", emoji: "📏", discomforts: ["thickness"] },
+  {
+    label: "야간 운전이 불편해요",
+    emoji: "🌙",
+    purposes: ["driving"],
+    discomforts: ["night_glare"],
+  },
+  {
+    label: "블루라이트 차단이 필요할까요?",
+    emoji: "💻",
+    purposes: ["screen"],
+    discomforts: ["eye_fatigue"],
+  },
 ];
 
 export function WelcomeScreen() {
   const next = useWizard((s) => s.next);
+  const togglePurpose = useWizard((s) => s.togglePurpose);
+  const toggleDiscomfort = useWizard((s) => s.toggleDiscomfort);
+
+  const startWith = (entry: (typeof QUICK_ENTRIES)[number]) => {
+    entry.purposes?.forEach(togglePurpose);
+    entry.discomforts?.forEach(toggleDiscomfort);
+    next();
+  };
 
   return (
     <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-2">
@@ -112,7 +136,7 @@ export function WelcomeScreen() {
                 transition={{ delay: 0.95 + i * 0.05 }}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={next}
+                onClick={() => startWith(q)}
                 className="px-4 py-2.5 rounded-2xl bg-white border border-ink-50 hover:border-ink-100 hover:shadow-card transition-all flex items-center gap-2 text-sm font-medium text-ink-700"
               >
                 <span>{q.emoji}</span>

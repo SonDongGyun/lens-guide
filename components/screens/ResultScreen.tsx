@@ -2,8 +2,13 @@
 
 import { motion } from "framer-motion";
 import { useWizard } from "@/lib/store";
-import { recommend } from "@/lib/recommendation";
-import { PURPOSES, DISCOMFORTS, COATINGS, INDEXES, LENS_TYPES } from "@/lib/data";
+import {
+  recommend,
+  buildSelectionBrief,
+  LENS_LABEL,
+  COATING_LABEL,
+} from "@/lib/recommendation";
+import { PURPOSES, DISCOMFORTS, INDEXES, LENS_TYPES } from "@/lib/data";
 import { SectionTitle } from "@/components/ui/ScreenShell";
 import { useMemo } from "react";
 
@@ -12,14 +17,18 @@ export function ResultScreen() {
   const discomforts = useWizard((s) => s.discomforts);
   const primaryConcern = useWizard((s) => s.primaryConcern);
   const prescription = useWizard((s) => s.prescription);
+  const lensType = useWizard((s) => s.lensType);
+  const selectedIndex = useWizard((s) => s.selectedIndex);
+  const coatings = useWizard((s) => s.coatings);
 
   const rec = useMemo(
     () => recommend({ purposes, discomforts, primaryConcern, prescription }),
     [purposes, discomforts, primaryConcern, prescription]
   );
 
-  const indexInfo = INDEXES.find((i) => i.id === rec.index)!;
-  const lensInfo = LENS_TYPES[rec.lensType];
+  const indexInfo = INDEXES.find((i) => i.id === selectedIndex)!;
+  const lensInfo = LENS_TYPES[lensType];
+  const brief = buildSelectionBrief(lensType, selectedIndex, coatings);
 
   return (
     <div className="h-full overflow-y-auto px-10 lg:px-20 pb-10">
@@ -57,10 +66,10 @@ export function ResultScreen() {
             <div className="flex items-center justify-between gap-6 flex-wrap">
               <div>
                 <div className="text-xs font-bold tracking-wider uppercase text-white/70">
-                  비교 안내 구성
+                  내가 고른 구성
                 </div>
                 <div className="mt-1 text-3xl lg:text-4xl font-bold tracking-tight">
-                  {rec.brief}
+                  {brief}
                 </div>
               </div>
               <motion.div
@@ -78,18 +87,22 @@ export function ResultScreen() {
             <div className="mt-8 grid sm:grid-cols-3 gap-4">
               <Highlight
                 label="렌즈 타입"
-                value={rec.highlights.lens}
+                value={LENS_LABEL[lensType]}
                 sub={lensInfo.tagline}
               />
               <Highlight
                 label="압축률"
-                value={rec.index}
+                value={selectedIndex}
                 sub={indexInfo.summary}
               />
               <Highlight
                 label="기능 옵션"
-                value={`${rec.coatings.length}개`}
-                sub={rec.highlights.coating}
+                value={`${coatings.length}개`}
+                sub={
+                  coatings.length > 0
+                    ? coatings.map((c) => COATING_LABEL[c]).join(" + ")
+                    : "선택한 코팅이 없어요"
+                }
               />
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useWizard } from "@/lib/store";
-import { recommend } from "@/lib/recommendation";
+import { buildSelectionBrief } from "@/lib/recommendation";
 import { PURPOSES, DISCOMFORTS } from "@/lib/data";
 import { Button } from "@/components/ui/Button";
 import { useEffect, useMemo, useState } from "react";
@@ -21,22 +21,14 @@ export function StaffScreen() {
   const reset = useWizard((s) => s.reset);
 
   const [ticket] = useState(() => storedTicket ?? makeTicket());
-  const [seconds, setSeconds] = useState(60);
 
   useEffect(() => {
     if (!storedTicket) setTicket(ticket);
   }, [storedTicket, setTicket, ticket]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setSeconds((s) => Math.max(0, s - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const rec = useMemo(
-    () => recommend({ purposes, discomforts, primaryConcern, prescription }),
-    [purposes, discomforts, primaryConcern, prescription]
+  const brief = useMemo(
+    () => buildSelectionBrief(lensType, selectedIndex, coatings),
+    [lensType, selectedIndex, coatings]
   );
 
   // persist completed consultation once on mount
@@ -51,7 +43,7 @@ export function StaffScreen() {
       lensType,
       selectedIndex,
       coatings,
-      brief: rec.brief,
+      brief,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -100,7 +92,7 @@ export function StaffScreen() {
               transition={{ delay: 0.55 }}
               className="mt-6 text-headline tracking-tight text-ink-900"
             >
-              직원 상담용 결과가 준비됐어요
+              상담 내용을 정리했어요
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 6 }}
@@ -108,7 +100,7 @@ export function StaffScreen() {
               transition={{ delay: 0.65 }}
               className="mt-2 text-ink-500 text-balance"
             >
-              이 화면을 직원에게 보여주시면 이어서 상담을 도와드려요.
+              이 화면을 직원에게 보여주세요.
             </motion.p>
           </div>
 
@@ -132,20 +124,12 @@ export function StaffScreen() {
                   {ticket}
                 </div>
               </div>
-              <div className="text-center">
+              <div className="text-center col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">
-                  비교 안내 구성
+                  내가 고른 구성
                 </div>
                 <div className="mt-1 text-base font-bold text-ink-900">
-                  {rec.brief}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">
-                  예상 호출
-                </div>
-                <div className="mt-1 font-num text-4xl font-bold gradient-text tracking-tight">
-                  {seconds}s
+                  {brief}
                 </div>
               </div>
             </div>
@@ -158,32 +142,18 @@ export function StaffScreen() {
             </div>
             <div className="p-5 rounded-2xl bg-ink-900 text-white">
               <div className="text-base font-medium leading-relaxed">
-                {buildBrief({
+                {buildStaffBrief({
                   purposes,
                   discomforts,
                   primaryConcern,
-                  rec,
+                  brief,
                 })}
               </div>
             </div>
 
-            <div className="mt-6 flex items-center gap-3 justify-center">
+            <div className="mt-6 flex items-center justify-center">
               <Button variant="secondary" size="lg" onClick={reset}>
                 처음으로
-              </Button>
-              <Button
-                variant="dark"
-                size="lg"
-                onClick={() => {
-                  const ok = window.confirm(
-                    "QR로 결과를 받으시겠어요? (시연용 알림)"
-                  );
-                  if (ok) {
-                    alert("QR이 매장 카운터 화면에 표시됩니다.");
-                  }
-                }}
-              >
-                QR로 결과 받기
               </Button>
             </div>
           </div>
@@ -202,16 +172,16 @@ export function StaffScreen() {
   );
 }
 
-function buildBrief({
+function buildStaffBrief({
   purposes,
   discomforts,
   primaryConcern,
-  rec,
+  brief,
 }: {
   purposes: string[];
   discomforts: string[];
   primaryConcern: string | null;
-  rec: ReturnType<typeof recommend>;
+  brief: string;
 }) {
   const purposeLabels = purposes
     .map((p) => PURPOSES.find((x) => x.id === p)?.label.replace(/요\.?$/, ""))
@@ -226,7 +196,7 @@ function buildBrief({
   const parts = [
     purposeLabels && `사용 패턴: ${purposeLabels}`,
     concern && `주요 고민: ${concern}`,
-    `안내: ${rec.brief}`,
+    `구성: ${brief}`,
   ].filter(Boolean);
 
   return parts.join(" · ");

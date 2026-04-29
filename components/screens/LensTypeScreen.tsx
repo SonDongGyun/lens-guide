@@ -19,19 +19,15 @@ export function LensTypeScreen() {
   const setLensType = useWizard((s) => s.setLensType);
   const [gaze, setGaze] = useState(0.5);
 
-  // auto demo: gentle gaze sweep when user idle
+  // auto demo: gentle gaze sweep, throttled to ~5fps to avoid
+  // state churn during AnimatePresence transitions
   useEffect(() => {
     let frame = 0;
-    let raf: number;
-    const tick = () => {
+    const id = setInterval(() => {
       frame += 1;
-      // sine wave between 0 and 1
-      const next = 0.5 + 0.45 * Math.sin(frame / 90);
-      setGaze(next);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+      setGaze(0.5 + 0.45 * Math.sin(frame / 6));
+    }, 200);
+    return () => clearInterval(id);
   }, [lensType]);
 
   const info = LENS_TYPES[lensType];
