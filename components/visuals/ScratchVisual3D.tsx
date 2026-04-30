@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 
 // Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
 // uncoated lens on the left accumulates real grooves; the coated lens
-// on the right answers each touch with a green shield burst. Each
-// lens owns an independent canvas-backed texture so they never share
-// state, and the coating overlay covers the whole right lens.
+// on the right answers each touch with a green shield burst. A single
+// invisible picker plane handles all pointer events for both lenses,
+// which avoids per-mesh pointer-capture quirks where a gesture on one
+// lens could leave residual state that blocked the next gesture on
+// the other lens.
 
 interface Stroke {
   points: { x: number; y: number }[];
@@ -21,29 +23,20 @@ interface Spark {
   bornAt: number;
 }
 
-// Per-lens canvas — aspect matches the lens ellipse so pixel density is
-// equal in both axes.
 const TEX_W = 720;
 const TEX_H = 800;
 const SPARK_LIFE = 0.75;
-// Generous limits + auto-roll on overflow so a long sustained drag
-// keeps producing visible strokes — the previous 10 strokes / 120
-// points caps caused new scratches to silently disappear after a few
-// seconds of dragging.
 const MAX_STROKES = 30;
 const MAX_POINTS_PER_STROKE = 250;
-// Skip pointer-move ticks closer than this to the previous point — at
-// 250+ Hz pointer rates we'd otherwise blow MAX_POINTS_PER_STROKE in
-// well under a second.
 const MIN_STROKE_STEP_PX = 3;
 
-// Per-lens silhouette (half-width / half-height) and X centers for the
-// left/right pair. Span ≈ -3.9 → 3.9 keeps both lenses inside the same
-// camera frame as the old single slab.
 const LENS_W = 1.8;
 const LENS_H = 2.0;
 const LEFT_X = -2.1;
 const RIGHT_X = 2.1;
+const PAINT_Y = 0.21;
+const COATING_Y = 0.27;
+const PICKER_Y = 0.5;
 
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
@@ -81,6 +74,7 @@ export function ScratchVisual3D() {
         <ambientLight intensity={0.55} />
         <directionalLight position={[10, 12, 8]} intensity={1.0} color="#FFFFFF" />
         <directionalLight position={[-8, 4, -6]} intensity={0.42} color="#9DB6FF" />
+        <pointLight position={[0, 8, 4]} intensity={0.55} color="#FFFFFF" />
 
         <Lens
           resetTick={resetTick}
@@ -95,7 +89,6 @@ export function ScratchVisual3D() {
         />
       </Canvas>
 
-      {/* split labels */}
       <div className="absolute bottom-12 sm:bottom-14 left-0 right-0 z-10 pointer-events-none flex">
         <div className="flex-1 text-center">
           <div className="inline-block px-2.5 py-1 rounded-full bg-rose-500/95 text-white text-[10px] sm:text-xs font-bold backdrop-blur shadow-soft">
@@ -109,7 +102,6 @@ export function ScratchVisual3D() {
         </div>
       </div>
 
-      {/* hint pill — bottom-left */}
       <motion.div
         animate={hasInteracted ? { opacity: 0.5 } : { opacity: 1 }}
         className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-ink-900/85 backdrop-blur text-white text-[10px] sm:text-[11px] font-medium whitespace-nowrap shadow-soft"
@@ -117,7 +109,6 @@ export function ScratchVisual3D() {
         렌즈를 손가락으로 긁어보세요
       </motion.div>
 
-      {/* reset — bottom-right (separated from hint to avoid mobile row wrap) */}
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={reset}
@@ -176,13 +167,11 @@ function Lens({
 }) {
   const strokesRef = useRef<Stroke[]>([]);
   const sparksRef = useRef<Spark[]>([]);
-  // Single source of truth for which lens (if any) is being dragged. Per-lens
-  // refs got into a stale state when a gesture started on one lens and the
-  // pointer wandered: pointer capture caused R3F's leave events to misfire,
-  // so the next gesture on the same lens silently no-op'd. With one ref we
-  // can also clear globally on window pointerup, so a release that lands
-  // outside any mesh still resets state.
-  const dragSideRef = useRef<"left" | "right" | null>(null);
+  // Single source of truth for the active gesture. Replaces the per-lens
+  // refs that used to get into a stuck state when R3F's mesh-level
+  // pointer capture lingered after a release on the other lens.
+  const isDownRef = useRef(false);
+  const lastSideRef = useRef<"left" | "right" | null>(null);
   const lastSparkAtRef = useRef(0);
 
   // Two independent canvas-backed textures — one per lens. Keeping
@@ -219,10 +208,34 @@ function Lens({
     return shape;
   }, []);
 
-  // ShapeGeometry's default UVs are raw shape coordinates; remap them
-  // to [0,1] across the bounding box so the canvas texture maps
-  // cleanly across the ellipse. We need two independent geometry
-  // instances since the two lenses use different textures.
+  const frameShape = useMemo(() => {
+    const RIM_W = 0.09;
+    const outer = new THREE.Shape();
+    outer.absellipse(
+      0,
+      0,
+      LENS_W + RIM_W,
+      LENS_H + RIM_W,
+      0,
+      Math.PI * 2,
+      false,
+      0
+    );
+    const inner = new THREE.Path();
+    inner.absellipse(
+      0,
+      0,
+      LENS_W + 0.005,
+      LENS_H + 0.005,
+      0,
+      Math.PI * 2,
+      false,
+      0
+    );
+    outer.holes.push(inner);
+    return outer;
+  }, []);
+
   const buildPaintGeometry = (shape: THREE.Shape) => {
     const geo = new THREE.ShapeGeometry(shape, 64);
     const positions = geo.attributes.position;
@@ -253,11 +266,12 @@ function Lens({
     sparksRef.current = [];
   }, [resetTick]);
 
-  // Window-level cleanup: a pointerup that lands off-canvas (or off-mesh)
-  // would otherwise leave dragSideRef stuck.
+  // Window-level cleanup: a release that lands off-canvas still ends
+  // the gesture cleanly.
   useEffect(() => {
     const clear = () => {
-      dragSideRef.current = null;
+      isDownRef.current = false;
+      lastSideRef.current = null;
     };
     window.addEventListener("pointerup", clear);
     window.addEventListener("pointercancel", clear);
@@ -277,8 +291,6 @@ function Lens({
     const sctx = scratchCanvas.getContext("2d");
     if (sctx) {
       sctx.clearRect(0, 0, TEX_W, TEX_H);
-      // faint red wash so the uncoated lens reads slightly warm even
-      // before any scratches.
       sctx.fillStyle = "rgba(252,165,165,0.07)";
       sctx.fillRect(0, 0, TEX_W, TEX_H);
 
@@ -294,7 +306,6 @@ function Lens({
           else sctx.lineTo(p.x, p.y);
         });
         sctx.stroke();
-        // bright sliver above the groove for a cut-glass feel
         sctx.strokeStyle = "rgba(255,255,255,0.45)";
         sctx.lineWidth = 0.8;
         sctx.beginPath();
@@ -359,15 +370,33 @@ function Lens({
     }
   });
 
-  const uvToTex = (uv: THREE.Vector2) => ({
-    x: uv.x * TEX_W,
-    y: (1 - uv.y) * TEX_H,
-  });
+  // World coords (XZ on the picker plane) → texture coords. The picker
+  // is rotated −90° around X, so local +Y maps to world −Z; that's why
+  // we flip Z when computing localY.
+  const worldToTex = (worldX: number, worldZ: number) => {
+    const isLeft = worldX < 0;
+    const lensX = isLeft ? LEFT_X : RIGHT_X;
+    const localX = worldX - lensX;
+    const localY = -worldZ;
+    const inside =
+      (localX / LENS_W) ** 2 + (localY / LENS_H) ** 2 <= 1;
+    const u = (localX + LENS_W) / (LENS_W * 2);
+    const v = (localY + LENS_H) / (LENS_H * 2);
+    return {
+      isLeft,
+      inside,
+      x: u * TEX_W,
+      y: (1 - v) * TEX_H,
+    };
+  };
 
-  // Push the next stroke point — but skip ones that haven't moved far
-  // enough, and auto-roll into a new stroke when the current one fills
-  // up. Without this, sustained drags either burn through the point
-  // budget in a fraction of a second or freeze silently.
+  const startStroke = (x: number, y: number) => {
+    strokesRef.current.push({ points: [{ x, y }] });
+    if (strokesRef.current.length > MAX_STROKES) {
+      strokesRef.current.shift();
+    }
+  };
+
   const pushStrokePoint = (x: number, y: number) => {
     const cur = strokesRef.current[strokesRef.current.length - 1];
     if (!cur) return;
@@ -393,114 +422,195 @@ function Lens({
     sparksRef.current.push({ x, y, bornAt: now });
   };
 
-  const capturePointer = (e: ThreeEvent<PointerEvent>) => {
+  const handleDown = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
     const target = e.target as Element & {
       setPointerCapture?: (id: number) => void;
     };
     target.setPointerCapture?.(e.pointerId);
+    isDownRef.current = true;
+    const { isLeft, inside, x, y } = worldToTex(e.point.x, e.point.z);
+    if (!inside) {
+      lastSideRef.current = null;
+      return;
+    }
+    if (isLeft) {
+      lastSideRef.current = "left";
+      startStroke(x, y);
+      onScratchStart();
+    } else {
+      lastSideRef.current = "right";
+      tryAddSpark(x, y, performance.now() / 1000);
+      onProtectStart();
+    }
+  };
+
+  const handleMove = (e: ThreeEvent<PointerEvent>) => {
+    if (!isDownRef.current) return;
+    const { isLeft, inside, x, y } = worldToTex(e.point.x, e.point.z);
+    if (!inside) {
+      lastSideRef.current = null;
+      return;
+    }
+    const curSide: "left" | "right" = isLeft ? "left" : "right";
+    if (curSide !== lastSideRef.current) {
+      // Crossing into a new lens silhouette (or returning from outside).
+      // Treat as a fresh sub-gesture so scratch grooves don't connect
+      // across the gap.
+      if (curSide === "left") {
+        startStroke(x, y);
+        onScratchStart();
+      } else {
+        tryAddSpark(x, y, performance.now() / 1000);
+        onProtectStart();
+      }
+      lastSideRef.current = curSide;
+    } else if (curSide === "left") {
+      pushStrokePoint(x, y);
+    } else {
+      tryAddSpark(x, y, performance.now() / 1000);
+    }
   };
 
   return (
     <group>
-      {/* LEFT LENS — uncoated, accumulates real scratches */}
-      <group position={[LEFT_X, 0, 0]}>
-        <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <extrudeGeometry
-            args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
-          />
-          <meshPhysicalMaterial
-            color="#D6E5F5"
-            roughness={0.12}
-            metalness={0.02}
-            clearcoat={0.7}
-            clearcoatRoughness={0.18}
-            transparent
-            opacity={0.92}
-          />
-        </mesh>
-        <mesh
-          geometry={leftPaintGeo}
-          position={[0, 0.21, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-            if (!e.uv) return;
-            e.stopPropagation();
-            capturePointer(e);
-            const { x, y } = uvToTex(e.uv);
-            dragSideRef.current = "left";
-            strokesRef.current.push({ points: [{ x, y }] });
-            if (strokesRef.current.length > MAX_STROKES) {
-              strokesRef.current.shift();
-            }
-            onScratchStart();
-          }}
-          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-            if (dragSideRef.current !== "left" || !e.uv) return;
-            const { x, y } = uvToTex(e.uv);
-            pushStrokePoint(x, y);
-          }}
-        >
-          <meshBasicMaterial map={scratchTexture} transparent />
-        </mesh>
-      </group>
+      {/* Frames — thin elliptical rim around each lens */}
+      <Frame x={LEFT_X} shape={frameShape} />
+      <Frame x={RIGHT_X} shape={frameShape} />
 
-      {/* RIGHT LENS — coated, sparks instead of scratches */}
-      <group position={[RIGHT_X, 0, 0]}>
-        <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <extrudeGeometry
-            args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
-          />
-          <meshPhysicalMaterial
-            color="#D6E5F5"
-            roughness={0.12}
-            metalness={0.02}
-            clearcoat={0.7}
-            clearcoatRoughness={0.18}
-            transparent
-            opacity={0.92}
-          />
-        </mesh>
-        <mesh
-          geometry={rightPaintGeo}
-          position={[0, 0.21, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-            if (!e.uv) return;
-            e.stopPropagation();
-            capturePointer(e);
-            const { x, y } = uvToTex(e.uv);
-            dragSideRef.current = "right";
-            tryAddSpark(x, y, performance.now() / 1000);
-            onProtectStart();
-          }}
-          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-            if (dragSideRef.current !== "right" || !e.uv) return;
-            const { x, y } = uvToTex(e.uv);
-            tryAddSpark(x, y, performance.now() / 1000);
-          }}
-        >
-          <meshBasicMaterial map={sparkTexture} transparent />
-        </mesh>
-        {/* Coating overlay — full ellipse, glossy violet */}
-        <mesh
-          position={[0, 0.27, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          raycast={() => null}
-        >
-          <shapeGeometry args={[lensShape]} />
-          <meshPhysicalMaterial
-            color="#7B61FF"
-            transparent
-            opacity={0.22}
-            roughness={0.05}
-            metalness={0.35}
-            clearcoat={0.9}
-            clearcoatRoughness={0.08}
-            emissive="#7B61FF"
-            emissiveIntensity={0.1}
-          />
-        </mesh>
-      </group>
+      {/* Substrates — clear glass blanks */}
+      <Substrate x={LEFT_X} shape={lensShape} />
+      <Substrate x={RIGHT_X} shape={lensShape} />
+
+      {/* Paint surfaces — canvas textures with scratches / spark glow */}
+      <mesh
+        geometry={leftPaintGeo}
+        position={[LEFT_X, PAINT_Y, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        raycast={() => null}
+      >
+        <meshBasicMaterial map={scratchTexture} transparent />
+      </mesh>
+      <mesh
+        geometry={rightPaintGeo}
+        position={[RIGHT_X, PAINT_Y, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        raycast={() => null}
+      >
+        <meshBasicMaterial map={sparkTexture} transparent />
+      </mesh>
+
+      {/* Coating overlay — full ellipse, glossy iridescent */}
+      <CoatingOverlay x={RIGHT_X} shape={lensShape} />
+
+      {/* Single invisible picker — covers entire stage so every
+          pointer event in the canvas routes through one mesh. */}
+      <mesh
+        position={[0, PICKER_Y, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onPointerDown={handleDown}
+        onPointerMove={handleMove}
+      >
+        <planeGeometry args={[50, 30]} />
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
+          colorWrite={false}
+        />
+      </mesh>
     </group>
+  );
+}
+
+function Frame({ x, shape }: { x: number; shape: THREE.Shape }) {
+  return (
+    <mesh
+      position={[x, -0.18, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      raycast={() => null}
+    >
+      <extrudeGeometry
+        args={[
+          shape,
+          {
+            depth: 0.5,
+            bevelEnabled: true,
+            bevelSegments: 4,
+            bevelSize: 0.025,
+            bevelThickness: 0.025,
+          },
+        ]}
+      />
+      <meshPhysicalMaterial
+        color="#1B2540"
+        roughness={0.3}
+        metalness={0.75}
+        clearcoat={0.7}
+        clearcoatRoughness={0.18}
+      />
+    </mesh>
+  );
+}
+
+function Substrate({ x, shape }: { x: number; shape: THREE.Shape }) {
+  return (
+    <mesh
+      position={[x, -0.3, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      raycast={() => null}
+    >
+      <extrudeGeometry
+        args={[
+          shape,
+          {
+            depth: 0.5,
+            bevelEnabled: true,
+            bevelSegments: 6,
+            bevelSize: 0.05,
+            bevelThickness: 0.05,
+          },
+        ]}
+      />
+      <meshPhysicalMaterial
+        color="#EAF1FB"
+        roughness={0.06}
+        metalness={0}
+        clearcoat={1}
+        clearcoatRoughness={0.04}
+        ior={1.5}
+        transmission={0.45}
+        thickness={0.5}
+        attenuationColor="#A8C5F0"
+        attenuationDistance={2.2}
+        transparent
+        opacity={0.92}
+      />
+    </mesh>
+  );
+}
+
+function CoatingOverlay({ x, shape }: { x: number; shape: THREE.Shape }) {
+  return (
+    <mesh
+      position={[x, COATING_Y, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      raycast={() => null}
+    >
+      <shapeGeometry args={[shape]} />
+      <meshPhysicalMaterial
+        color="#9AAEFF"
+        transparent
+        opacity={0.26}
+        roughness={0.04}
+        metalness={0.4}
+        clearcoat={1}
+        clearcoatRoughness={0.06}
+        iridescence={0.7}
+        iridescenceIOR={1.4}
+        emissive="#7B61FF"
+        emissiveIntensity={0.1}
+      />
+    </mesh>
   );
 }
