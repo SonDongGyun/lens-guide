@@ -36,7 +36,11 @@ const LEFT_X = -2.1;
 const RIGHT_X = 2.1;
 const PAINT_Y = 0.21;
 const COATING_Y = 0.27;
-const PICKER_Y = 0.5;
+// Sit the picker just above the visible lens face. Putting it far above
+// (e.g. Y=0.5) introduced parallax: the camera ray that visually points at
+// the lens silhouette's bottom edge would land outside the silhouette by
+// the time it reached the picker, so taps near the edges silently no-op'd.
+const PICKER_Y = 0.22;
 
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
@@ -71,10 +75,10 @@ export function ScratchVisual3D() {
         gl={{ antialias: true, alpha: true }}
         style={{ background: "transparent", touchAction: "none" }}
       >
-        <ambientLight intensity={0.55} />
-        <directionalLight position={[10, 12, 8]} intensity={1.0} color="#FFFFFF" />
-        <directionalLight position={[-8, 4, -6]} intensity={0.42} color="#9DB6FF" />
-        <pointLight position={[0, 8, 4]} intensity={0.55} color="#FFFFFF" />
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 11, 7]} intensity={1.35} color="#FFFFFF" />
+        <directionalLight position={[-7, 4, 5]} intensity={0.5} color="#C9D8FF" />
+        <pointLight position={[0, 6, 6]} intensity={0.45} color="#FFFFFF" />
 
         <Lens
           resetTick={resetTick}
@@ -208,8 +212,10 @@ function Lens({
     return shape;
   }, []);
 
+  // Thin rim around each lens — a touch wider than the substrate so it
+  // visually grips the glass like a real spectacle frame.
   const frameShape = useMemo(() => {
-    const RIM_W = 0.09;
+    const RIM_W = 0.07;
     const outer = new THREE.Shape();
     outer.absellipse(
       0,
@@ -225,8 +231,8 @@ function Lens({
     inner.absellipse(
       0,
       0,
-      LENS_W + 0.005,
-      LENS_H + 0.005,
+      LENS_W + 0.006,
+      LENS_H + 0.006,
       0,
       Math.PI * 2,
       false,
@@ -478,6 +484,10 @@ function Lens({
       <Frame x={LEFT_X} shape={frameShape} />
       <Frame x={RIGHT_X} shape={frameShape} />
 
+      {/* Bridge — slim metal nose-piece tying the two rims together so
+          the pair reads as a real pair of glasses, not two floating disks. */}
+      <Bridge />
+
       {/* Substrates — clear glass blanks */}
       <Substrate x={LEFT_X} shape={lensShape} />
       <Substrate x={RIGHT_X} shape={lensShape} />
@@ -526,7 +536,7 @@ function Lens({
 function Frame({ x, shape }: { x: number; shape: THREE.Shape }) {
   return (
     <mesh
-      position={[x, -0.18, 0]}
+      position={[x, -0.05, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
       raycast={() => null}
     >
@@ -534,20 +544,43 @@ function Frame({ x, shape }: { x: number; shape: THREE.Shape }) {
         args={[
           shape,
           {
-            depth: 0.5,
+            depth: 0.32,
             bevelEnabled: true,
             bevelSegments: 4,
-            bevelSize: 0.025,
-            bevelThickness: 0.025,
+            bevelSize: 0.02,
+            bevelThickness: 0.02,
           },
         ]}
       />
       <meshPhysicalMaterial
-        color="#1B2540"
-        roughness={0.3}
-        metalness={0.75}
-        clearcoat={0.7}
-        clearcoatRoughness={0.18}
+        color="#1A2540"
+        roughness={0.22}
+        metalness={0.85}
+        clearcoat={0.85}
+        clearcoatRoughness={0.12}
+      />
+    </mesh>
+  );
+}
+
+function Bridge() {
+  // The cylinder is laid sideways so its length runs along world X. We
+  // span from the right edge of the left lens to the left edge of the
+  // right lens, with a touch of overlap so it tucks into each rim.
+  const length = (RIGHT_X - LENS_W) - (LEFT_X + LENS_W) + 0.18;
+  return (
+    <mesh
+      position={[0, 0.12, 0]}
+      rotation={[0, 0, Math.PI / 2]}
+      raycast={() => null}
+    >
+      <cylinderGeometry args={[0.085, 0.085, length, 24]} />
+      <meshPhysicalMaterial
+        color="#1A2540"
+        roughness={0.22}
+        metalness={0.85}
+        clearcoat={0.85}
+        clearcoatRoughness={0.12}
       />
     </mesh>
   );
@@ -556,7 +589,7 @@ function Frame({ x, shape }: { x: number; shape: THREE.Shape }) {
 function Substrate({ x, shape }: { x: number; shape: THREE.Shape }) {
   return (
     <mesh
-      position={[x, -0.3, 0]}
+      position={[x, -0.06, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
       raycast={() => null}
     >
@@ -564,27 +597,23 @@ function Substrate({ x, shape }: { x: number; shape: THREE.Shape }) {
         args={[
           shape,
           {
-            depth: 0.5,
+            depth: 0.26,
             bevelEnabled: true,
             bevelSegments: 6,
-            bevelSize: 0.05,
-            bevelThickness: 0.05,
+            bevelSize: 0.04,
+            bevelThickness: 0.04,
           },
         ]}
       />
       <meshPhysicalMaterial
-        color="#EAF1FB"
-        roughness={0.06}
+        color="#F2F7FD"
+        roughness={0.04}
         metalness={0}
         clearcoat={1}
-        clearcoatRoughness={0.04}
+        clearcoatRoughness={0.02}
         ior={1.5}
-        transmission={0.45}
-        thickness={0.5}
-        attenuationColor="#A8C5F0"
-        attenuationDistance={2.2}
         transparent
-        opacity={0.92}
+        opacity={0.55}
       />
     </mesh>
   );
@@ -599,17 +628,17 @@ function CoatingOverlay({ x, shape }: { x: number; shape: THREE.Shape }) {
     >
       <shapeGeometry args={[shape]} />
       <meshPhysicalMaterial
-        color="#9AAEFF"
+        color="#A8B5FF"
         transparent
-        opacity={0.26}
+        opacity={0.22}
         roughness={0.04}
-        metalness={0.4}
+        metalness={0.45}
         clearcoat={1}
-        clearcoatRoughness={0.06}
-        iridescence={0.7}
-        iridescenceIOR={1.4}
+        clearcoatRoughness={0.05}
+        iridescence={0.85}
+        iridescenceIOR={1.45}
         emissive="#7B61FF"
-        emissiveIntensity={0.1}
+        emissiveIntensity={0.12}
       />
     </mesh>
   );
