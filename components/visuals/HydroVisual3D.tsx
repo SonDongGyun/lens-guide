@@ -29,28 +29,32 @@ const SPAWN_Y_TOP = 1.05;
 const KILL_Y = -1.05;
 
 // Profile points (r, y) revolved around Y to form the bead silhouette.
-// Engineered for the sharp classic water-drop look:
+// Engineered for the classic 💧 water-drop look — the *body* itself
+// has to read as a drop, not just the apex:
 // - rounded hemisphere bottom (y -1 → -0.2)
-// - wide belly peaking near y = 0
-// - long tapering upper third with a long, thin apex extending up
-//   to y ≈ 1.45 (taller than wide, so the silhouette reads as a
-//   pointed drop and not a potato).
+// - belly plateau slightly below middle (peak r at y ≈ -0.08)
+// - distinct shoulder around y = 0.25 where the side wall flips from
+//   convex to a long concave taper
+// - long thin apex extending past y = 1.55, so the silhouette is
+//   noticeably taller than wide (aspect ≈ 1.4)
 const TEARDROP_PROFILE: Array<[number, number]> = [
   [0.0, -1.0],
-  [0.32, -0.94],
-  [0.58, -0.82],
-  [0.75, -0.66],
-  [0.86, -0.46],
-  [0.92, -0.22],
-  [0.94, 0.04],
-  [0.92, 0.28],
-  [0.82, 0.5],
-  [0.66, 0.68],
-  [0.46, 0.84],
-  [0.28, 0.98],
-  [0.14, 1.14],
-  [0.05, 1.3],
-  [0.0, 1.46],
+  [0.3, -0.94],
+  [0.58, -0.8],
+  [0.78, -0.6],
+  [0.9, -0.36],
+  [0.95, -0.12],
+  [0.94, 0.1],
+  [0.86, 0.3],
+  [0.74, 0.46],
+  [0.6, 0.6],
+  [0.46, 0.74],
+  [0.32, 0.88],
+  [0.2, 1.02],
+  [0.11, 1.18],
+  [0.05, 1.36],
+  [0.02, 1.5],
+  [0.0, 1.62],
 ];
 
 export function HydroVisual3D() {
