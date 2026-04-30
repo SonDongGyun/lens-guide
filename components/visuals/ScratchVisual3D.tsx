@@ -34,13 +34,15 @@ const LENS_W = 1.8;
 const LENS_H = 2.0;
 const LEFT_X = -2.1;
 const RIGHT_X = 2.1;
-const PAINT_Y = 0.21;
-const COATING_Y = 0.27;
-// Sit the picker just above the visible lens face. Putting it far above
-// (e.g. Y=0.5) introduced parallax: the camera ray that visually points at
-// the lens silhouette's bottom edge would land outside the silhouette by
-// the time it reached the picker, so taps near the edges silently no-op'd.
-const PICKER_Y = 0.22;
+// Substrate is extruded (depth 0.26 + bevelThickness 0.04) and rotated so
+// its top face sits at world y ≈ 0.24. Paint must clear that top face or
+// it renders *inside* the substrate volume and gets z-occluded.
+const PAINT_Y = 0.28;
+const COATING_Y = 0.32;
+// Picker is above everything visible. Parallax was the old worry (PICKER_Y
+// too high made edge taps land outside the silhouette), but at y=0.34 the
+// drift is well under 0.05 world units — still well inside lens edges.
+const PICKER_Y = 0.34;
 
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
@@ -304,20 +306,33 @@ function Lens({
       sctx.lineJoin = "round";
       for (const stroke of strokesRef.current) {
         if (stroke.points.length < 1) continue;
-        sctx.strokeStyle = "rgba(20,28,46,0.85)";
-        sctx.lineWidth = 2.6;
+        // Soft outer halo — like the lens micro-fracture haze around
+        // a deep groove. Drawn first so the dark groove sits on top.
+        sctx.strokeStyle = "rgba(15,23,42,0.18)";
+        sctx.lineWidth = 8;
         sctx.beginPath();
         stroke.points.forEach((p, i) => {
           if (i === 0) sctx.moveTo(p.x, p.y);
           else sctx.lineTo(p.x, p.y);
         });
         sctx.stroke();
-        sctx.strokeStyle = "rgba(255,255,255,0.45)";
-        sctx.lineWidth = 0.8;
+        // Main groove — much darker and wider than before so it reads
+        // through the translucent substrate instead of disappearing.
+        sctx.strokeStyle = "rgba(15,23,42,0.95)";
+        sctx.lineWidth = 4;
         sctx.beginPath();
         stroke.points.forEach((p, i) => {
-          if (i === 0) sctx.moveTo(p.x - 0.8, p.y - 0.8);
-          else sctx.lineTo(p.x - 0.8, p.y - 0.8);
+          if (i === 0) sctx.moveTo(p.x, p.y);
+          else sctx.lineTo(p.x, p.y);
+        });
+        sctx.stroke();
+        // Bright sliver above the groove for cut-glass feel.
+        sctx.strokeStyle = "rgba(255,255,255,0.7)";
+        sctx.lineWidth = 1.2;
+        sctx.beginPath();
+        stroke.points.forEach((p, i) => {
+          if (i === 0) sctx.moveTo(p.x - 1.2, p.y - 1.2);
+          else sctx.lineTo(p.x - 1.2, p.y - 1.2);
         });
         sctx.stroke();
       }
@@ -491,22 +506,27 @@ function Lens({
       <Substrate x={LEFT_X} shape={lensShape} />
       <Substrate x={RIGHT_X} shape={lensShape} />
 
-      {/* Paint surfaces — canvas textures with scratches / spark glow */}
+      {/* Paint surfaces — canvas textures with scratches / spark glow.
+          renderOrder forces these to draw after the substrates so the
+          texture isn't hidden by the substrate's transparent depth
+          write, even if camera-distance sorting flips. */}
       <mesh
         geometry={leftPaintGeo}
         position={[LEFT_X, PAINT_Y, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         raycast={() => null}
+        renderOrder={2}
       >
-        <meshBasicMaterial map={scratchTexture} transparent />
+        <meshBasicMaterial map={scratchTexture} transparent depthWrite={false} />
       </mesh>
       <mesh
         geometry={rightPaintGeo}
         position={[RIGHT_X, PAINT_Y, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         raycast={() => null}
+        renderOrder={2}
       >
-        <meshBasicMaterial map={sparkTexture} transparent />
+        <meshBasicMaterial map={sparkTexture} transparent depthWrite={false} />
       </mesh>
 
       {/* Coating overlay — full ellipse, glossy iridescent */}
@@ -514,18 +534,23 @@ function Lens({
 
       {/* Single invisible picker — covers entire stage so every
           pointer event in the canvas routes through one mesh.
-          DoubleSide so we don't lose hits if the rotation flips the
-          plane normal away from the camera on some platforms. */}
+          depthWrite={false} so this plane doesn't poison the depth
+          buffer and z-occlude the paint below it (it's transparent
+          but still writes depth by default, which silently nuked the
+          scratch visual). DoubleSide so we don't lose hits if the
+          rotation flips the plane normal away from the camera. */}
       <mesh
         position={[0, PICKER_Y, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         onPointerDown={handleDown}
         onPointerMove={handleMove}
+        renderOrder={10}
       >
         <planeGeometry args={[60, 40]} />
         <meshBasicMaterial
           transparent
           opacity={0}
+          depthWrite={false}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -627,6 +652,7 @@ function CoatingOverlay({ x, shape }: { x: number; shape: THREE.Shape }) {
       position={[x, COATING_Y, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
       raycast={() => null}
+      renderOrder={3}
     >
       <shapeGeometry args={[shape, 96]} />
       <meshPhysicalMaterial
