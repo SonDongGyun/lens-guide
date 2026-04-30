@@ -426,8 +426,15 @@ function Lens({
     };
   }, [camera, gl]);
 
-  useFrame(({ clock }) => {
-    const now = clock.elapsedTime;
+  useFrame(() => {
+    // Use performance.now() to match the clock used when spawning sparks.
+    // Mixing it with R3F's clock.elapsedTime made `now - spark.bornAt`
+    // start out negative (the R3F clock starts on first frame, but
+    // performance.now() is anchored at navigation start). A negative age
+    // produced a negative gradient radius, which throws IndexSizeError
+    // from createRadialGradient and silently stalls the entire useFrame
+    // loop — that was killing all canvas updates after the first spark.
+    const now = performance.now() / 1000;
     sparksRef.current = sparksRef.current.filter(
       (s) => now - s.bornAt < SPARK_LIFE
     );
@@ -503,9 +510,9 @@ function Lens({
       pctx.fillRect(0, 0, TEX_W, TEX_H);
 
       for (const spark of sparksRef.current) {
-        const age = (now - spark.bornAt) / SPARK_LIFE;
+        const age = Math.max(0, Math.min(1, (now - spark.bornAt) / SPARK_LIFE));
         const alpha = 1 - age;
-        const radius = 18 + age * 30;
+        const radius = Math.max(0.5, 18 + age * 30);
 
         const grad = pctx.createRadialGradient(
           spark.x,
