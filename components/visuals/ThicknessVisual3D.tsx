@@ -21,14 +21,13 @@ const VIEW_LABELS: Record<View, string> = {
   side: "측면",
 };
 
-// Pulled in slightly from the previous framing so the lens reads larger
-// without crowding the chrome. The 4-index strip used to live at the
-// bottom and forced extra margin; now that it's gone we can let the
-// model breathe a little closer to the camera.
+// Pulled in further so the lens fills more of the frame — chrome on
+// the left/right (HUD, view tabs, reference pill) leaves a strip the
+// lens can comfortably occupy without crowding.
 const VIEW_POSITIONS: Record<View, [number, number, number]> = {
-  front: [0, 0, 90],
-  oblique: [60, 28, 60],
-  side: [90, 0, 0],
+  front: [0, 0, 76],
+  oblique: [51, 24, 51],
+  side: [76, 0, 0],
 };
 
 const RADIUS_MM = 15;

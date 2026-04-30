@@ -268,14 +268,16 @@ function DrivingScene() {
 
 // External flat-illustration assets carry the device framing AND the
 // eye-health content (Korean text rendered into the screen / pages).
-// We just stretch them to fill the card.
+// object-contain so the whole image always fits without cropping —
+// card aspect varies during resize and we don't want the monitor/book
+// edges to get chopped off.
 function MonitorScene() {
   return (
     <div className="w-full h-full relative overflow-hidden bg-[#A6C8E8]">
       <img
         src="/scenes/monitor.png"
         alt="모니터 화면 — 디지털 눈 피로 줄이기"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain"
       />
     </div>
   );
@@ -287,7 +289,7 @@ function BookScene() {
       <img
         src="/scenes/book.png"
         alt="책 — 눈을 쉬게 하는 작은 습관들"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain"
       />
     </div>
   );
