@@ -305,7 +305,26 @@ function Lens({
       sctx.lineCap = "round";
       sctx.lineJoin = "round";
       for (const stroke of strokesRef.current) {
-        if (stroke.points.length < 1) continue;
+        if (stroke.points.length === 0) continue;
+        // Single-point stroke (a tap with no drag) — Canvas2D's `stroke`
+        // on a path that only has `moveTo` draws nothing, so a tap used
+        // to silently disappear. Render it as a small impact divot.
+        if (stroke.points.length === 1) {
+          const p = stroke.points[0];
+          sctx.fillStyle = "rgba(15,23,42,0.18)";
+          sctx.beginPath();
+          sctx.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
+          sctx.fill();
+          sctx.fillStyle = "rgba(15,23,42,0.95)";
+          sctx.beginPath();
+          sctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2);
+          sctx.fill();
+          sctx.fillStyle = "rgba(255,255,255,0.75)";
+          sctx.beginPath();
+          sctx.arc(p.x - 0.9, p.y - 0.9, 0.9, 0, Math.PI * 2);
+          sctx.fill();
+          continue;
+        }
         // Soft outer halo — like the lens micro-fracture haze around
         // a deep groove. Drawn first so the dark groove sits on top.
         sctx.strokeStyle = "rgba(15,23,42,0.18)";
