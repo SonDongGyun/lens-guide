@@ -176,119 +176,46 @@ function ProgressiveFlow() {
 }
 
 function SceneBand({ id }: { id: SceneId }) {
-  if (id === "far") return <DrivingScene />;
-  if (id === "mid") return <MonitorScene />;
-  return <BookScene />;
-}
-
-function DrivingScene() {
-  return (
-    <div className="w-full h-full relative">
-      <svg
-        viewBox="0 0 800 200"
-        preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-0 w-full h-full"
-      >
-        <defs>
-          <linearGradient id="dr-sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#0F1F3D" />
-            <stop offset="0.55" stopColor="#1F4685" />
-            <stop offset="1" stopColor="#5680B8" />
-          </linearGradient>
-          <linearGradient id="dr-road" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#2A2A2A" />
-            <stop offset="1" stopColor="#0E0E0E" />
-          </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="800" height="120" fill="url(#dr-sky)" />
-        <ellipse cx="400" cy="118" rx="520" ry="22" fill="#83A5D8" opacity="0.45" />
-        <path
-          d="M0,118 L40,118 L48,108 L82,108 L92,114 L138,114 L150,100 L188,100 L200,110 L246,110 L254,118 L800,118 L800,120 L0,120 Z"
-          fill="#0A1628"
-          opacity="0.9"
-        />
-        <polygon points="20,118 6,160 34,160" fill="#08182E" />
-        <polygon points="60,108 44,158 76,158" fill="#0E2238" />
-        <polygon points="780,108 766,158 794,158" fill="#08182E" />
-        <polygon points="730,118 720,160 740,160" fill="#0E2238" />
-        <polygon points="0,200 800,200 528,118 272,118" fill="url(#dr-road)" />
-        <line x1="272" y1="118" x2="0" y2="200" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.5" />
-        <line x1="528" y1="118" x2="800" y2="200" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.5" />
-        <rect x="397" y="124" width="6" height="4" rx="0.5" fill="#FFD24A" />
-        <rect x="395" y="134" width="10" height="6" rx="1" fill="#FFD24A" />
-        <rect x="392" y="148" width="16" height="10" rx="1" fill="#FFD24A" />
-        <rect x="388" y="166" width="22" height="14" rx="1.5" fill="#FFD24A" />
-        <rect x="383" y="186" width="32" height="14" rx="2" fill="#FFD24A" />
-        <rect x="346" y="110" width="108" height="34" rx="6" fill="#1B1B1B" />
-        <rect x="349" y="113" width="102" height="13" rx="2" fill="#0E0E0E" />
-        <rect x="354" y="129" width="14" height="6" rx="1.5" fill="#FF2A2A" />
-        <rect x="432" y="129" width="14" height="6" rx="1.5" fill="#FF2A2A" />
-        <rect x="378" y="131" width="44" height="11" rx="1" fill="#F2F2F2" />
-        <text
-          x="400"
-          y="139.5"
-          textAnchor="middle"
-          fontSize="7.5"
-          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
-          fontWeight="800"
-          fill="#1A1A1A"
-          letterSpacing="-0.3"
-        >
-          12가 3456
-        </text>
-        <rect x="582" y="58" width="148" height="68" rx="4" fill="#0E5E3D" stroke="#FFFFFF" strokeWidth="2" />
-        <text
-          x="656"
-          y="88"
-          textAnchor="middle"
-          fontSize="22"
-          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
-          fontWeight="800"
-          fill="#FFFFFF"
-        >
-          서울
-        </text>
-        <text
-          x="656"
-          y="114"
-          textAnchor="middle"
-          fontSize="14"
-          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
-          fontWeight="600"
-          fill="#FFFFFF"
-        >
-          5 km
-        </text>
-        <rect x="652" y="126" width="8" height="24" fill="#6B6B6B" />
-        <path d="M0,200 Q400,182 800,200 L800,202 L0,202 Z" fill="#070707" opacity="0.85" />
-      </svg>
-    </div>
-  );
-}
-
-// External flat-illustration assets carry the device framing AND the
-// eye-health content (Korean text rendered into the screen / pages).
-// object-contain so the whole image always fits without cropping —
-// card aspect varies during resize and we don't want the monitor/book
-// edges to get chopped off.
-function MonitorScene() {
-  return (
-    <div className="w-full h-full relative overflow-hidden bg-[#A6C8E8]">
-      <img
+  if (id === "far") {
+    return (
+      <SceneImage
+        src="/scenes/driving.png"
+        alt="운전 — 먼 거리 시야"
+      />
+    );
+  }
+  if (id === "mid") {
+    return (
+      <SceneImage
         src="/scenes/monitor.png"
         alt="모니터 화면 — 디지털 눈 피로 줄이기"
-        className="absolute inset-0 w-full h-full object-contain"
       />
-    </div>
+    );
+  }
+  return (
+    <SceneImage
+      src="/scenes/book.png"
+      alt="책 — 눈을 쉬게 하는 작은 습관들"
+    />
   );
 }
 
-function BookScene() {
+// Same image rendered twice: a blurred copy stretched to fill becomes the
+// backdrop, the original sits on top with object-contain so nothing gets
+// chopped. The card aspect ratio shifts as the page resizes — without the
+// blurred underlay, contain would leave hard letterbox bands; without the
+// contain layer on top, cover would crop the device edges off.
+function SceneImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#F5EBD0]">
+    <div className="w-full h-full relative overflow-hidden">
       <img
-        src="/scenes/book.png"
-        alt="책 — 눈을 쉬게 하는 작은 습관들"
+        src={src}
+        aria-hidden
+        className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-95"
+      />
+      <img
+        src={src}
+        alt={alt}
         className="absolute inset-0 w-full h-full object-contain"
       />
     </div>

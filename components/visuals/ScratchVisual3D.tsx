@@ -176,8 +176,13 @@ function Lens({
 }) {
   const strokesRef = useRef<Stroke[]>([]);
   const sparksRef = useRef<Spark[]>([]);
-  const isDraggingLeftRef = useRef(false);
-  const isDraggingRightRef = useRef(false);
+  // Single source of truth for which lens (if any) is being dragged. Per-lens
+  // refs got into a stale state when a gesture started on one lens and the
+  // pointer wandered: pointer capture caused R3F's leave events to misfire,
+  // so the next gesture on the same lens silently no-op'd. With one ref we
+  // can also clear globally on window pointerup, so a release that lands
+  // outside any mesh still resets state.
+  const dragSideRef = useRef<"left" | "right" | null>(null);
   const lastSparkAtRef = useRef(0);
 
   // Two independent canvas-backed textures — one per lens. Keeping
@@ -247,6 +252,20 @@ function Lens({
     strokesRef.current = [];
     sparksRef.current = [];
   }, [resetTick]);
+
+  // Window-level cleanup: a pointerup that lands off-canvas (or off-mesh)
+  // would otherwise leave dragSideRef stuck.
+  useEffect(() => {
+    const clear = () => {
+      dragSideRef.current = null;
+    };
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
+    return () => {
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
+    };
+  }, []);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;
@@ -389,10 +408,14 @@ function Lens({
           <extrudeGeometry
             args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
           />
-          <meshStandardMaterial
-            color="#A6BFE2"
-            roughness={0.4}
-            metalness={0.1}
+          <meshPhysicalMaterial
+            color="#D6E5F5"
+            roughness={0.12}
+            metalness={0.02}
+            clearcoat={0.7}
+            clearcoatRoughness={0.18}
+            transparent
+            opacity={0.92}
           />
         </mesh>
         <mesh
@@ -404,7 +427,7 @@ function Lens({
             e.stopPropagation();
             capturePointer(e);
             const { x, y } = uvToTex(e.uv);
-            isDraggingLeftRef.current = true;
+            dragSideRef.current = "left";
             strokesRef.current.push({ points: [{ x, y }] });
             if (strokesRef.current.length > MAX_STROKES) {
               strokesRef.current.shift();
@@ -412,15 +435,9 @@ function Lens({
             onScratchStart();
           }}
           onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-            if (!isDraggingLeftRef.current || !e.uv) return;
+            if (dragSideRef.current !== "left" || !e.uv) return;
             const { x, y } = uvToTex(e.uv);
             pushStrokePoint(x, y);
-          }}
-          onPointerUp={() => {
-            isDraggingLeftRef.current = false;
-          }}
-          onPointerLeave={() => {
-            isDraggingLeftRef.current = false;
           }}
         >
           <meshBasicMaterial map={scratchTexture} transparent />
@@ -433,10 +450,14 @@ function Lens({
           <extrudeGeometry
             args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
           />
-          <meshStandardMaterial
-            color="#A6BFE2"
-            roughness={0.4}
-            metalness={0.1}
+          <meshPhysicalMaterial
+            color="#D6E5F5"
+            roughness={0.12}
+            metalness={0.02}
+            clearcoat={0.7}
+            clearcoatRoughness={0.18}
+            transparent
+            opacity={0.92}
           />
         </mesh>
         <mesh
@@ -448,20 +469,14 @@ function Lens({
             e.stopPropagation();
             capturePointer(e);
             const { x, y } = uvToTex(e.uv);
-            isDraggingRightRef.current = true;
+            dragSideRef.current = "right";
             tryAddSpark(x, y, performance.now() / 1000);
             onProtectStart();
           }}
           onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-            if (!isDraggingRightRef.current || !e.uv) return;
+            if (dragSideRef.current !== "right" || !e.uv) return;
             const { x, y } = uvToTex(e.uv);
             tryAddSpark(x, y, performance.now() / 1000);
-          }}
-          onPointerUp={() => {
-            isDraggingRightRef.current = false;
-          }}
-          onPointerLeave={() => {
-            isDraggingRightRef.current = false;
           }}
         >
           <meshBasicMaterial map={sparkTexture} transparent />
@@ -473,14 +488,16 @@ function Lens({
           raycast={() => null}
         >
           <shapeGeometry args={[lensShape]} />
-          <meshStandardMaterial
+          <meshPhysicalMaterial
             color="#7B61FF"
             transparent
             opacity={0.22}
             roughness={0.05}
-            metalness={0.45}
+            metalness={0.35}
+            clearcoat={0.9}
+            clearcoatRoughness={0.08}
             emissive="#7B61FF"
-            emissiveIntensity={0.08}
+            emissiveIntensity={0.1}
           />
         </mesh>
       </group>
