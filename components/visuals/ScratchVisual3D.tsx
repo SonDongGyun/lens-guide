@@ -429,11 +429,10 @@ function Lens({
   };
 
   const handleDown = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    const target = e.target as Element & {
-      setPointerCapture?: (id: number) => void;
-    };
-    target.setPointerCapture?.(e.pointerId);
+    // Don't stopPropagation or call setPointerCapture — both have caused
+    // gestures to silently no-op after a release on the other side. The
+    // picker mesh is the only raycastable object in the scene, so there
+    // is nothing to propagate to anyway.
     isDownRef.current = true;
     const { isLeft, inside, x, y } = worldToTex(e.point.x, e.point.z);
     if (!inside) {
@@ -514,19 +513,20 @@ function Lens({
       <CoatingOverlay x={RIGHT_X} shape={lensShape} />
 
       {/* Single invisible picker — covers entire stage so every
-          pointer event in the canvas routes through one mesh. */}
+          pointer event in the canvas routes through one mesh.
+          DoubleSide so we don't lose hits if the rotation flips the
+          plane normal away from the camera on some platforms. */}
       <mesh
         position={[0, PICKER_Y, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         onPointerDown={handleDown}
         onPointerMove={handleMove}
       >
-        <planeGeometry args={[50, 30]} />
+        <planeGeometry args={[60, 40]} />
         <meshBasicMaterial
           transparent
           opacity={0}
-          depthWrite={false}
-          colorWrite={false}
+          side={THREE.DoubleSide}
         />
       </mesh>
     </group>
@@ -545,6 +545,7 @@ function Frame({ x, shape }: { x: number; shape: THREE.Shape }) {
           shape,
           {
             depth: 0.32,
+            curveSegments: 96,
             bevelEnabled: true,
             bevelSegments: 4,
             bevelSize: 0.02,
@@ -598,6 +599,7 @@ function Substrate({ x, shape }: { x: number; shape: THREE.Shape }) {
           shape,
           {
             depth: 0.26,
+            curveSegments: 96,
             bevelEnabled: true,
             bevelSegments: 6,
             bevelSize: 0.04,
@@ -626,7 +628,7 @@ function CoatingOverlay({ x, shape }: { x: number; shape: THREE.Shape }) {
       rotation={[-Math.PI / 2, 0, 0]}
       raycast={() => null}
     >
-      <shapeGeometry args={[shape]} />
+      <shapeGeometry args={[shape, 96]} />
       <meshPhysicalMaterial
         color="#A8B5FF"
         transparent

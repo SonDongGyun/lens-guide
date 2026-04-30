@@ -95,9 +95,9 @@ export function LensTypeVisual({ lensType, singleTarget }: Props) {
         {SCENES.map((s) => {
           const stat = status[s.id];
           const blur =
-            stat.tone === "clear" ? 0 : stat.tone === "soft" ? 5 : 9;
+            stat.tone === "clear" ? 0 : stat.tone === "soft" ? 2.5 : 4.5;
           const opacity =
-            stat.tone === "clear" ? 1 : stat.tone === "soft" ? 0.85 : 0.65;
+            stat.tone === "clear" ? 1 : stat.tone === "soft" ? 0.9 : 0.78;
           return (
             <div
               key={s.id}
