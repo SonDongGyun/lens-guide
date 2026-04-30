@@ -1,6 +1,6 @@
 "use client";
 
-import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "framer-motion";
@@ -8,11 +8,17 @@ import { cn } from "@/lib/utils";
 
 // Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
 // uncoated lens on the left accumulates real grooves; the coated lens
-// on the right answers each touch with a green shield burst. A single
-// invisible picker plane handles all pointer events for both lenses,
-// which avoids per-mesh pointer-capture quirks where a gesture on one
-// lens could leave residual state that blocked the next gesture on
-// the other lens.
+// on the right answers each touch with a green shield burst.
+//
+// Pointer events are wired *directly* to the canvas DOM element instead
+// of via R3F's mesh-event picker. Earlier iterations used an invisible
+// picker plane with onPointerDown/Move handlers, but R3F's internal
+// pointer-capture state could end up wedged after a gesture on one lens
+// (the third gesture in a row would silently no-op even though the first
+// two worked). DOM listeners are immune to that — `pointerdown` always
+// fires, `pointermove`/`pointerup` are tracked on `window` so they fire
+// even when the finger leaves the canvas, and we filter by pointerId so
+// multi-touch can't corrupt the active-gesture state.
 
 interface Stroke {
   points: { x: number; y: number }[];
@@ -36,13 +42,11 @@ const LEFT_X = -2.1;
 const RIGHT_X = 2.1;
 // Substrate is extruded (depth 0.26 + bevelThickness 0.04) and rotated so
 // its top face sits at world y ≈ 0.24. Paint must clear that top face or
-// it renders *inside* the substrate volume and gets z-occluded.
+// it renders *inside* the substrate volume and gets z-occluded. Pointer
+// events also intersect this plane (see screenToLens) so the hit point
+// matches what the user sees, not where some invisible picker sits.
 const PAINT_Y = 0.28;
 const COATING_Y = 0.32;
-// Picker is above everything visible. Parallax was the old worry (PICKER_Y
-// too high made edge taps land outside the silhouette), but at y=0.34 the
-// drift is well under 0.05 world units — still well inside lens edges.
-const PICKER_Y = 0.34;
 
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
@@ -171,14 +175,25 @@ function Lens({
   onScratchStart: () => void;
   onProtectStart: () => void;
 }) {
+  const { camera, gl } = useThree();
   const strokesRef = useRef<Stroke[]>([]);
   const sparksRef = useRef<Spark[]>([]);
-  // Single source of truth for the active gesture. Replaces the per-lens
-  // refs that used to get into a stuck state when R3F's mesh-level
-  // pointer capture lingered after a release on the other lens.
   const isDownRef = useRef(false);
   const lastSideRef = useRef<"left" | "right" | null>(null);
   const lastSparkAtRef = useRef(0);
+  // Tracks the active touch's pointerId so a second finger can't corrupt
+  // the gesture mid-scratch. null = no active gesture.
+  const activePointerIdRef = useRef<number | null>(null);
+
+  // Stash the parent callbacks in refs so the DOM event listeners below
+  // never go stale across re-renders. The parent passes inline arrows
+  // every render, but we only attach listeners once.
+  const onScratchStartRef = useRef(onScratchStart);
+  const onProtectStartRef = useRef(onProtectStart);
+  useEffect(() => {
+    onScratchStartRef.current = onScratchStart;
+    onProtectStartRef.current = onProtectStart;
+  });
 
   // Two independent canvas-backed textures — one per lens. Keeping
   // them split means the uncoated lens never has to know about sparks
@@ -274,20 +289,142 @@ function Lens({
     sparksRef.current = [];
   }, [resetTick]);
 
-  // Window-level cleanup: a release that lands off-canvas still ends
-  // the gesture cleanly.
+  // DOM-level pointer plumbing. We intentionally bypass R3F's mesh-event
+  // picker because the previous picker-plane approach got stuck after a
+  // gesture-on-coated → gesture-on-uncoated sequence (the third gesture
+  // would silently no-op while the first two worked). DOM events on the
+  // canvas + window are immune to that class of bug.
   useEffect(() => {
-    const clear = () => {
+    const canvas = gl.domElement;
+
+    const startStroke = (x: number, y: number) => {
+      strokesRef.current.push({ points: [{ x, y }] });
+      if (strokesRef.current.length > MAX_STROKES) {
+        strokesRef.current.shift();
+      }
+    };
+    const pushStrokePoint = (x: number, y: number) => {
+      const cur = strokesRef.current[strokesRef.current.length - 1];
+      if (!cur) return;
+      const last = cur.points[cur.points.length - 1];
+      if (last) {
+        const dx = x - last.x;
+        const dy = y - last.y;
+        if (dx * dx + dy * dy < MIN_STROKE_STEP_PX * MIN_STROKE_STEP_PX)
+          return;
+      }
+      if (cur.points.length >= MAX_POINTS_PER_STROKE) {
+        strokesRef.current.push({ points: [{ x, y }] });
+        if (strokesRef.current.length > MAX_STROKES) {
+          strokesRef.current.shift();
+        }
+      } else {
+        cur.points.push({ x, y });
+      }
+    };
+    const tryAddSpark = (x: number, y: number, now: number) => {
+      if (now - lastSparkAtRef.current < 0.045) return;
+      lastSparkAtRef.current = now;
+      sparksRef.current.push({ x, y, bornAt: now });
+    };
+
+    // Cast a screen-space pointer onto the *visible* lens plane (y =
+    // PAINT_Y). Using the lens plane (not the picker plane) eliminates
+    // parallax — the hit point lands exactly where the user perceives
+    // the lens surface, regardless of camera angle.
+    const screenToLens = (clientX: number, clientY: number) => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
+      const v = new THREE.Vector3(ndcX, ndcY, 0.5).unproject(camera);
+      const dir = v.sub(camera.position).normalize();
+      if (Math.abs(dir.y) < 1e-6) return null;
+      const t = (PAINT_Y - camera.position.y) / dir.y;
+      if (t < 0) return null;
+      return {
+        worldX: camera.position.x + t * dir.x,
+        worldZ: camera.position.z + t * dir.z,
+      };
+    };
+
+    const worldToTex = (worldX: number, worldZ: number) => {
+      const isLeft = worldX < 0;
+      const lensX = isLeft ? LEFT_X : RIGHT_X;
+      const localX = worldX - lensX;
+      const localY = -worldZ;
+      const inside =
+        (localX / LENS_W) ** 2 + (localY / LENS_H) ** 2 <= 1;
+      const u = (localX + LENS_W) / (LENS_W * 2);
+      const v = (localY + LENS_H) / (LENS_H * 2);
+      return { isLeft, inside, x: u * TEX_W, y: (1 - v) * TEX_H };
+    };
+
+    const handleDown = (e: PointerEvent) => {
+      if (activePointerIdRef.current !== null) return;
+      const wp = screenToLens(e.clientX, e.clientY);
+      if (!wp) return;
+      activePointerIdRef.current = e.pointerId;
+      isDownRef.current = true;
+      lastSideRef.current = null;
+      const { isLeft, inside, x, y } = worldToTex(wp.worldX, wp.worldZ);
+      if (!inside) return;
+      if (isLeft) {
+        lastSideRef.current = "left";
+        startStroke(x, y);
+        onScratchStartRef.current();
+      } else {
+        lastSideRef.current = "right";
+        tryAddSpark(x, y, performance.now() / 1000);
+        onProtectStartRef.current();
+      }
+    };
+
+    const handleMove = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return;
+      if (!isDownRef.current) return;
+      const wp = screenToLens(e.clientX, e.clientY);
+      if (!wp) return;
+      const { isLeft, inside, x, y } = worldToTex(wp.worldX, wp.worldZ);
+      if (!inside) {
+        lastSideRef.current = null;
+        return;
+      }
+      const curSide: "left" | "right" = isLeft ? "left" : "right";
+      if (curSide !== lastSideRef.current) {
+        if (curSide === "left") {
+          startStroke(x, y);
+          onScratchStartRef.current();
+        } else {
+          tryAddSpark(x, y, performance.now() / 1000);
+          onProtectStartRef.current();
+        }
+        lastSideRef.current = curSide;
+      } else if (curSide === "left") {
+        pushStrokePoint(x, y);
+      } else {
+        tryAddSpark(x, y, performance.now() / 1000);
+      }
+    };
+
+    const handleUp = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return;
+      activePointerIdRef.current = null;
       isDownRef.current = false;
       lastSideRef.current = null;
     };
-    window.addEventListener("pointerup", clear);
-    window.addEventListener("pointercancel", clear);
+
+    canvas.addEventListener("pointerdown", handleDown);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
     return () => {
-      window.removeEventListener("pointerup", clear);
-      window.removeEventListener("pointercancel", clear);
+      canvas.removeEventListener("pointerdown", handleDown);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
     };
-  }, []);
+  }, [camera, gl]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;
@@ -410,107 +547,6 @@ function Lens({
     }
   });
 
-  // World coords (XZ on the picker plane) → texture coords. The picker
-  // is rotated −90° around X, so local +Y maps to world −Z; that's why
-  // we flip Z when computing localY.
-  const worldToTex = (worldX: number, worldZ: number) => {
-    const isLeft = worldX < 0;
-    const lensX = isLeft ? LEFT_X : RIGHT_X;
-    const localX = worldX - lensX;
-    const localY = -worldZ;
-    const inside =
-      (localX / LENS_W) ** 2 + (localY / LENS_H) ** 2 <= 1;
-    const u = (localX + LENS_W) / (LENS_W * 2);
-    const v = (localY + LENS_H) / (LENS_H * 2);
-    return {
-      isLeft,
-      inside,
-      x: u * TEX_W,
-      y: (1 - v) * TEX_H,
-    };
-  };
-
-  const startStroke = (x: number, y: number) => {
-    strokesRef.current.push({ points: [{ x, y }] });
-    if (strokesRef.current.length > MAX_STROKES) {
-      strokesRef.current.shift();
-    }
-  };
-
-  const pushStrokePoint = (x: number, y: number) => {
-    const cur = strokesRef.current[strokesRef.current.length - 1];
-    if (!cur) return;
-    const last = cur.points[cur.points.length - 1];
-    if (last) {
-      const dx = x - last.x;
-      const dy = y - last.y;
-      if (dx * dx + dy * dy < MIN_STROKE_STEP_PX * MIN_STROKE_STEP_PX) return;
-    }
-    if (cur.points.length >= MAX_POINTS_PER_STROKE) {
-      strokesRef.current.push({ points: [{ x, y }] });
-      if (strokesRef.current.length > MAX_STROKES) {
-        strokesRef.current.shift();
-      }
-    } else {
-      cur.points.push({ x, y });
-    }
-  };
-
-  const tryAddSpark = (x: number, y: number, now: number) => {
-    if (now - lastSparkAtRef.current < 0.045) return;
-    lastSparkAtRef.current = now;
-    sparksRef.current.push({ x, y, bornAt: now });
-  };
-
-  const handleDown = (e: ThreeEvent<PointerEvent>) => {
-    // Don't stopPropagation or call setPointerCapture — both have caused
-    // gestures to silently no-op after a release on the other side. The
-    // picker mesh is the only raycastable object in the scene, so there
-    // is nothing to propagate to anyway.
-    isDownRef.current = true;
-    const { isLeft, inside, x, y } = worldToTex(e.point.x, e.point.z);
-    if (!inside) {
-      lastSideRef.current = null;
-      return;
-    }
-    if (isLeft) {
-      lastSideRef.current = "left";
-      startStroke(x, y);
-      onScratchStart();
-    } else {
-      lastSideRef.current = "right";
-      tryAddSpark(x, y, performance.now() / 1000);
-      onProtectStart();
-    }
-  };
-
-  const handleMove = (e: ThreeEvent<PointerEvent>) => {
-    if (!isDownRef.current) return;
-    const { isLeft, inside, x, y } = worldToTex(e.point.x, e.point.z);
-    if (!inside) {
-      lastSideRef.current = null;
-      return;
-    }
-    const curSide: "left" | "right" = isLeft ? "left" : "right";
-    if (curSide !== lastSideRef.current) {
-      // Crossing into a new lens silhouette (or returning from outside).
-      // Treat as a fresh sub-gesture so scratch grooves don't connect
-      // across the gap.
-      if (curSide === "left") {
-        startStroke(x, y);
-        onScratchStart();
-      } else {
-        tryAddSpark(x, y, performance.now() / 1000);
-        onProtectStart();
-      }
-      lastSideRef.current = curSide;
-    } else if (curSide === "left") {
-      pushStrokePoint(x, y);
-    } else {
-      tryAddSpark(x, y, performance.now() / 1000);
-    }
-  };
-
   return (
     <group>
       {/* Frames — thin elliptical rim around each lens */}
@@ -550,29 +586,6 @@ function Lens({
 
       {/* Coating overlay — full ellipse, glossy iridescent */}
       <CoatingOverlay x={RIGHT_X} shape={lensShape} />
-
-      {/* Single invisible picker — covers entire stage so every
-          pointer event in the canvas routes through one mesh.
-          depthWrite={false} so this plane doesn't poison the depth
-          buffer and z-occlude the paint below it (it's transparent
-          but still writes depth by default, which silently nuked the
-          scratch visual). DoubleSide so we don't lose hits if the
-          rotation flips the plane normal away from the camera. */}
-      <mesh
-        position={[0, PICKER_Y, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        onPointerDown={handleDown}
-        onPointerMove={handleMove}
-        renderOrder={10}
-      >
-        <planeGeometry args={[60, 40]} />
-        <meshBasicMaterial
-          transparent
-          opacity={0}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
     </group>
   );
 }
