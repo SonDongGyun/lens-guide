@@ -266,65 +266,384 @@ function DrivingScene() {
   );
 }
 
+// Front-on flat illustration of a monitor whose screen is itself an
+// eye-health webpage — so the *content* the lens type compares against
+// is teaching the user something. SVG instead of a raster so the
+// Korean text renders crisply at any card size.
 function MonitorScene() {
   return (
-    <div className="w-full h-full relative overflow-hidden">
-      <img
-        src="/scenes/monitor.jpg"
-        alt=""
-        draggable={false}
-        className="absolute inset-0 w-full h-full object-cover select-none"
-      />
-      <EyeHealthTip
-        eyebrow="눈 건강 · 모니터"
-        title="20-20-20 규칙"
-        body="20분마다 6m 거리를 20초간 응시"
-      />
+    <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#1F2A45] via-[#172238] to-[#0E1726]">
+      <svg
+        viewBox="0 0 800 500"
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute inset-0 w-full h-full"
+      >
+        <defs>
+          <linearGradient id="ms-screen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#FAFCFF" />
+            <stop offset="1" stopColor="#E9EFF8" />
+          </linearGradient>
+        </defs>
+
+        {/* desk surface */}
+        <rect x="0" y="438" width="800" height="62" fill="#1F2A40" />
+        <rect x="0" y="434" width="800" height="6" fill="#34405A" />
+
+        {/* stand */}
+        <rect x="385" y="402" width="30" height="34" fill="#11192B" rx="2" />
+        <rect x="325" y="428" width="150" height="14" rx="4" fill="#11192B" />
+
+        {/* monitor body + screen */}
+        <rect x="80" y="56" width="640" height="350" rx="14" fill="#0A0F1C" />
+        <rect x="98" y="74" width="604" height="314" rx="5" fill="url(#ms-screen)" />
+
+        {/* browser top bar */}
+        <rect x="98" y="74" width="604" height="32" fill="#E1E7F0" />
+        <circle cx="118" cy="90" r="4" fill="#FF5F57" />
+        <circle cx="132" cy="90" r="4" fill="#FFBD2E" />
+        <circle cx="146" cy="90" r="4" fill="#28CA42" />
+        <rect x="170" y="82" width="500" height="16" rx="3" fill="#F4F6FA" />
+        <text
+          x="184"
+          y="94"
+          fontSize="10"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#6B7280"
+        >
+          eyehealth.guide / digital-strain
+        </text>
+
+        {/* page heading */}
+        <text
+          x="158"
+          y="148"
+          fontSize="22"
+          fontWeight="800"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#1A2A4A"
+          letterSpacing="-0.5"
+        >
+          디지털 눈 피로 줄이기
+        </text>
+        <text
+          x="158"
+          y="168"
+          fontSize="11"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#6B7280"
+        >
+          건강 칼럼 · 눈 건강 가이드
+        </text>
+
+        {/* hero stat card */}
+        <rect
+          x="158"
+          y="186"
+          width="200"
+          height="120"
+          rx="8"
+          fill="#EEF3FB"
+          stroke="#D5DDE8"
+          strokeWidth="1"
+        />
+        <text
+          x="258"
+          y="234"
+          textAnchor="middle"
+          fontSize="34"
+          fontWeight="800"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#3182F6"
+          letterSpacing="-1"
+        >
+          20-20-20
+        </text>
+        <text
+          x="258"
+          y="258"
+          textAnchor="middle"
+          fontSize="11"
+          fontWeight="700"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#1A2A4A"
+        >
+          규칙
+        </text>
+        <text
+          x="258"
+          y="280"
+          textAnchor="middle"
+          fontSize="9"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#4A5568"
+        >
+          20분 작업 → 6m 거리
+        </text>
+        <text
+          x="258"
+          y="293"
+          textAnchor="middle"
+          fontSize="9"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#4A5568"
+        >
+          → 20초 응시
+        </text>
+
+        {/* side article */}
+        <text
+          x="378"
+          y="208"
+          fontSize="13"
+          fontWeight="700"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#1A2A4A"
+        >
+          왜 중요한가요?
+        </text>
+        <rect x="378" y="220" width="294" height="5" rx="1.5" fill="#D5DDE8" />
+        <rect x="378" y="232" width="280" height="5" rx="1.5" fill="#D5DDE8" />
+        <rect x="378" y="244" width="288" height="5" rx="1.5" fill="#D5DDE8" />
+        <rect x="378" y="256" width="240" height="5" rx="1.5" fill="#D5DDE8" />
+
+        <text
+          x="378"
+          y="288"
+          fontSize="11"
+          fontWeight="700"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#1A2A4A"
+        >
+          화면까지 50~70cm 유지
+        </text>
+        <rect x="378" y="298" width="270" height="5" rx="1.5" fill="#D5DDE8" />
+
+        {/* footer body */}
+        <rect x="158" y="332" width="514" height="5" rx="1.5" fill="#D5DDE8" />
+        <rect x="158" y="344" width="494" height="5" rx="1.5" fill="#D5DDE8" />
+        <rect x="158" y="356" width="380" height="5" rx="1.5" fill="#D5DDE8" />
+
+        {/* power LED */}
+        <circle cx="400" cy="396" r="2" fill="#3182F6" opacity="0.85" />
+      </svg>
     </div>
   );
 }
 
+// Open book viewed straight on with an eye-health column on the
+// pages — same intent as the monitor scene but for near vision.
 function BookScene() {
   return (
-    <div className="w-full h-full relative overflow-hidden">
-      <img
-        src="/scenes/book.jpg"
-        alt=""
-        draggable={false}
-        className="absolute inset-0 w-full h-full object-cover select-none"
-      />
-      <EyeHealthTip
-        eyebrow="눈 건강 · 독서"
-        title="30~40cm 독서 거리"
-        body="300lux 이상 밝기, 30분마다 휴식"
-      />
-    </div>
-  );
-}
+    <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#3A2E1F] via-[#2D2317] to-[#1A130A]">
+      <svg
+        viewBox="0 0 800 500"
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute inset-0 w-full h-full"
+      >
+        <defs>
+          <linearGradient id="bk-page" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#FFFCF1" />
+            <stop offset="1" stopColor="#F4EBD3" />
+          </linearGradient>
+          <linearGradient id="bk-spine" x1="0" y1="0.5" x2="1" y2="0.5">
+            <stop offset="0" stopColor="#C9B89A" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#5A4A30" stopOpacity="0.55" />
+            <stop offset="1" stopColor="#C9B89A" stopOpacity="0" />
+          </linearGradient>
+        </defs>
 
-// Floating tip card sized to fit inside the small scene area without
-// covering the image. Stays readable across whatever underlying image
-// thanks to the dark scrim + backdrop blur.
-function EyeHealthTip({
-  eyebrow,
-  title,
-  body,
-}: {
-  eyebrow: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="absolute bottom-1 left-1 right-1 sm:bottom-1.5 sm:left-1.5 sm:right-1.5 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-md sm:rounded-lg bg-black/65 backdrop-blur-sm border border-white/10">
-      <div className="text-[7px] sm:text-[9px] font-bold tracking-wider uppercase text-white/55 leading-none">
-        {eyebrow}
-      </div>
-      <div className="text-white text-[9px] sm:text-[11px] font-bold leading-tight mt-0.5">
-        {title}
-      </div>
-      <div className="text-white/75 text-[8px] sm:text-[10px] mt-0.5 leading-tight">
-        {body}
-      </div>
+        {/* table shadow */}
+        <ellipse cx="400" cy="460" rx="380" ry="22" fill="#120A04" opacity="0.7" />
+
+        {/* book block (page edges) */}
+        <rect x="74" y="84" width="652" height="350" fill="#E8DCB8" />
+        <rect x="74" y="84" width="652" height="4" fill="#C9B786" />
+
+        {/* page surface */}
+        <rect x="80" y="80" width="640" height="346" fill="url(#bk-page)" />
+
+        {/* spine shadow */}
+        <rect x="392" y="80" width="16" height="346" fill="url(#bk-spine)" />
+        <line
+          x1="400"
+          y1="80"
+          x2="400"
+          y2="426"
+          stroke="#A8967A"
+          strokeWidth="1"
+          opacity="0.45"
+        />
+
+        {/* LEFT PAGE */}
+        <text
+          x="120"
+          y="125"
+          fontSize="9"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fontWeight="700"
+          fill="#8A7857"
+          letterSpacing="1.5"
+        >
+          CHAPTER 03
+        </text>
+        <text
+          x="120"
+          y="160"
+          fontSize="22"
+          fontWeight="800"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#2D2417"
+          letterSpacing="-0.5"
+        >
+          눈을 쉬게 하는
+        </text>
+        <text
+          x="120"
+          y="186"
+          fontSize="22"
+          fontWeight="800"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#2D2417"
+          letterSpacing="-0.5"
+        >
+          작은 습관들
+        </text>
+        <rect x="120" y="200" width="40" height="2" fill="#8A7857" />
+
+        <rect x="120" y="222" width="245" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="120" y="237" width="255" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="120" y="252" width="220" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="120" y="267" width="240" height="5" rx="1.5" fill="#9B8A6A" />
+
+        <text
+          x="120"
+          y="300"
+          fontSize="11"
+          fontWeight="700"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#2D2417"
+        >
+          • 자주 깜빡이기
+        </text>
+        <text
+          x="120"
+          y="318"
+          fontSize="11"
+          fontWeight="700"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#2D2417"
+        >
+          • 30~40cm 독서 거리
+        </text>
+        <text
+          x="120"
+          y="336"
+          fontSize="11"
+          fontWeight="700"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#2D2417"
+        >
+          • 30분마다 짧은 휴식
+        </text>
+
+        <rect x="120" y="358" width="245" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="120" y="373" width="200" height="5" rx="1.5" fill="#9B8A6A" />
+
+        {/* RIGHT PAGE */}
+        <text
+          x="430"
+          y="125"
+          fontSize="14"
+          fontWeight="800"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#2D2417"
+        >
+          조명과 눈
+        </text>
+        <rect x="430" y="135" width="30" height="2" fill="#8A7857" />
+
+        <rect x="430" y="156" width="240" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="430" y="171" width="255" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="430" y="186" width="220" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="430" y="201" width="245" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="430" y="216" width="180" height="5" rx="1.5" fill="#9B8A6A" />
+
+        {/* small diagram — desk lamp + book */}
+        <rect
+          x="450"
+          y="248"
+          width="170"
+          height="86"
+          rx="4"
+          fill="#F7EFD8"
+          stroke="#C9B89A"
+          strokeWidth="1.2"
+        />
+        {/* lamp */}
+        <line x1="540" y1="256" x2="540" y2="296" stroke="#7A6850" strokeWidth="2.4" />
+        <path
+          d="M 524 256 L 556 256 L 549 274 L 531 274 Z"
+          fill="#7A6850"
+        />
+        <line
+          x1="540"
+          y1="276"
+          x2="492"
+          y2="320"
+          stroke="#FFE7A8"
+          strokeWidth="1.2"
+          strokeDasharray="2 2"
+          opacity="0.85"
+        />
+        <line
+          x1="540"
+          y1="276"
+          x2="588"
+          y2="320"
+          stroke="#FFE7A8"
+          strokeWidth="1.2"
+          strokeDasharray="2 2"
+          opacity="0.85"
+        />
+        {/* small book on desk */}
+        <rect x="510" y="312" width="60" height="10" rx="1.5" fill="#A8946F" />
+        <line x1="540" y1="312" x2="540" y2="322" stroke="#7A6850" strokeWidth="0.8" />
+        <text
+          x="535"
+          y="354"
+          textAnchor="middle"
+          fontSize="9"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fontWeight="700"
+          fill="#7A6850"
+        >
+          300 lux 이상이 적당
+        </text>
+
+        <rect x="430" y="370" width="240" height="5" rx="1.5" fill="#9B8A6A" />
+        <rect x="430" y="385" width="210" height="5" rx="1.5" fill="#9B8A6A" />
+
+        {/* page numbers */}
+        <text
+          x="120"
+          y="414"
+          fontSize="9"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#8A7857"
+        >
+          — 23 —
+        </text>
+        <text
+          x="680"
+          y="414"
+          textAnchor="end"
+          fontSize="9"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#8A7857"
+        >
+          — 24 —
+        </text>
+      </svg>
     </div>
   );
 }
