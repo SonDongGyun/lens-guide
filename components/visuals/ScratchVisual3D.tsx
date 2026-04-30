@@ -6,10 +6,11 @@ import * as THREE from "three";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-// Drag-to-scratch lab. Left half is uncoated and accumulates real grooves;
-// right half is coated and answers each touch with a green shield burst.
-// All stroke + spark state lives on a 2-D canvas bound as a CanvasTexture
-// to the lens top, so we never rebuild Three.js geometry per pointer move.
+// Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
+// uncoated lens on the left accumulates real grooves; the coated lens
+// on the right answers each touch with a green shield burst. Each
+// lens owns an independent canvas-backed texture so they never share
+// state, and the coating overlay covers the whole right lens.
 
 interface Stroke {
   points: { x: number; y: number }[];
@@ -20,18 +21,29 @@ interface Spark {
   bornAt: number;
 }
 
-const TEX_W = 1024;
-const TEX_H = 640;
+// Per-lens canvas — aspect matches the lens ellipse so pixel density is
+// equal in both axes.
+const TEX_W = 720;
+const TEX_H = 800;
 const SPARK_LIFE = 0.75;
-const MAX_STROKES = 10;
-const MAX_POINTS_PER_STROKE = 120;
+// Generous limits + auto-roll on overflow so a long sustained drag
+// keeps producing visible strokes — the previous 10 strokes / 120
+// points caps caused new scratches to silently disappear after a few
+// seconds of dragging.
+const MAX_STROKES = 30;
+const MAX_POINTS_PER_STROKE = 250;
+// Skip pointer-move ticks closer than this to the previous point — at
+// 250+ Hz pointer rates we'd otherwise blow MAX_POINTS_PER_STROKE in
+// well under a second.
+const MIN_STROKE_STEP_PX = 3;
 
-// Eyeglass-lens silhouette dimensions (half-width / half-height).
-// The substrate, the paintable surface, and the coating overlay all
-// share this ellipse so the demo reads as a real lens rather than a
-// rectangular slab.
-const LENS_W = 4;
-const LENS_H = 2.5;
+// Per-lens silhouette (half-width / half-height) and X centers for the
+// left/right pair. Span ≈ -3.9 → 3.9 keeps both lenses inside the same
+// camera frame as the old single slab.
+const LENS_W = 1.8;
+const LENS_H = 2.0;
+const LEFT_X = -2.1;
+const RIGHT_X = 2.1;
 
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
@@ -164,51 +176,50 @@ function Lens({
 }) {
   const strokesRef = useRef<Stroke[]>([]);
   const sparksRef = useRef<Spark[]>([]);
-  const isDraggingRef = useRef(false);
-  const lastSideRef = useRef<"uncoated" | "coated" | null>(null);
+  const isDraggingLeftRef = useRef(false);
+  const isDraggingRightRef = useRef(false);
   const lastSparkAtRef = useRef(0);
 
-  const { canvasEl, texture } = useMemo(() => {
-    const canvasEl = document.createElement("canvas");
-    canvasEl.width = TEX_W;
-    canvasEl.height = TEX_H;
-    const texture = new THREE.CanvasTexture(canvasEl);
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    return { canvasEl, texture };
+  // Two independent canvas-backed textures — one per lens. Keeping
+  // them split means the uncoated lens never has to know about sparks
+  // and the coated lens never has to know about scratches.
+  const {
+    scratchCanvas,
+    scratchTexture,
+    sparkCanvas,
+    sparkTexture,
+  } = useMemo(() => {
+    const make = () => {
+      const c = document.createElement("canvas");
+      c.width = TEX_W;
+      c.height = TEX_H;
+      const t = new THREE.CanvasTexture(c);
+      t.minFilter = THREE.LinearFilter;
+      t.magFilter = THREE.LinearFilter;
+      return { c, t };
+    };
+    const left = make();
+    const right = make();
+    return {
+      scratchCanvas: left.c,
+      scratchTexture: left.t,
+      sparkCanvas: right.c,
+      sparkTexture: right.t,
+    };
   }, []);
 
-  // Full lens silhouette (ellipse) — used by the substrate body and
-  // the paintable top face.
   const lensShape = useMemo(() => {
     const shape = new THREE.Shape();
     shape.absellipse(0, 0, LENS_W, LENS_H, 0, Math.PI * 2, false, 0);
     return shape;
   }, []);
 
-  // Right half of the same ellipse — closes a vertical line down the
-  // centerline so the coating plate exactly covers the "coated" side.
-  const coatingShape = useMemo(() => {
-    const shape = new THREE.Shape();
-    const segs = 48;
-    for (let i = 0; i <= segs; i++) {
-      const t = -Math.PI / 2 + (Math.PI * i) / segs;
-      const x = LENS_W * Math.cos(t);
-      const y = LENS_H * Math.sin(t);
-      if (i === 0) shape.moveTo(x, y);
-      else shape.lineTo(x, y);
-    }
-    shape.lineTo(0, -LENS_H);
-    return shape;
-  }, []);
-
-  // ShapeGeometry's default UVs are raw shape coordinates ([-LENS_W, LENS_W]
-  // × [-LENS_H, LENS_H]) which would push the canvas texture outside [0,1].
-  // Build the paint geometry once and remap UVs to a [0,1] bounding-box span
-  // so painting + side detection still work the same way they did with the
-  // old planeGeometry.
-  const paintGeometry = useMemo(() => {
-    const geo = new THREE.ShapeGeometry(lensShape, 64);
+  // ShapeGeometry's default UVs are raw shape coordinates; remap them
+  // to [0,1] across the bounding box so the canvas texture maps
+  // cleanly across the ellipse. We need two independent geometry
+  // instances since the two lenses use different textures.
+  const buildPaintGeometry = (shape: THREE.Shape) => {
+    const geo = new THREE.ShapeGeometry(shape, 64);
     const positions = geo.attributes.position;
     const uvs = geo.attributes.uv;
     for (let i = 0; i < positions.count; i++) {
@@ -218,24 +229,24 @@ function Lens({
     }
     uvs.needsUpdate = true;
     return geo;
-  }, [lensShape]);
+  };
+
+  const leftPaintGeo = useMemo(() => buildPaintGeometry(lensShape), [lensShape]);
+  const rightPaintGeo = useMemo(() => buildPaintGeometry(lensShape), [lensShape]);
 
   useEffect(() => {
     return () => {
-      paintGeometry.dispose();
+      leftPaintGeo.dispose();
+      rightPaintGeo.dispose();
+      scratchTexture.dispose();
+      sparkTexture.dispose();
     };
-  }, [paintGeometry]);
+  }, [leftPaintGeo, rightPaintGeo, scratchTexture, sparkTexture]);
 
   useEffect(() => {
     strokesRef.current = [];
     sparksRef.current = [];
   }, [resetTick]);
-
-  useEffect(() => {
-    return () => {
-      texture.dispose();
-    };
-  }, [texture]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;
@@ -243,107 +254,118 @@ function Lens({
       (s) => now - s.bornAt < SPARK_LIFE
     );
 
-    const ctx = canvasEl.getContext("2d");
-    if (!ctx) return;
+    // --- Left lens (scratches) ---
+    const sctx = scratchCanvas.getContext("2d");
+    if (sctx) {
+      sctx.clearRect(0, 0, TEX_W, TEX_H);
+      // faint red wash so the uncoated lens reads slightly warm even
+      // before any scratches.
+      sctx.fillStyle = "rgba(252,165,165,0.07)";
+      sctx.fillRect(0, 0, TEX_W, TEX_H);
 
-    ctx.clearRect(0, 0, TEX_W, TEX_H);
-
-    // Side tints — barely-there so the eye reads "two zones" without
-    // overpowering the lens material itself.
-    ctx.fillStyle = "rgba(252,165,165,0.10)";
-    ctx.fillRect(0, 0, TEX_W / 2, TEX_H);
-    ctx.fillStyle = "rgba(110,231,183,0.10)";
-    ctx.fillRect(TEX_W / 2, 0, TEX_W / 2, TEX_H);
-
-    // Dashed centerline divider
-    ctx.strokeStyle = "rgba(40,50,80,0.22)";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([12, 10]);
-    ctx.beginPath();
-    ctx.moveTo(TEX_W / 2, 0);
-    ctx.lineTo(TEX_W / 2, TEX_H);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Permanent scratches on the uncoated half
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    for (const stroke of strokesRef.current) {
-      if (stroke.points.length < 1) continue;
-      // dark groove
-      ctx.strokeStyle = "rgba(20,28,46,0.85)";
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      stroke.points.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
-      ctx.stroke();
-      // bright sliver above the groove for a cut-glass feel
-      ctx.strokeStyle = "rgba(255,255,255,0.45)";
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      stroke.points.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x - 0.8, p.y - 0.8);
-        else ctx.lineTo(p.x - 0.8, p.y - 0.8);
-      });
-      ctx.stroke();
-    }
-
-    // Sparks + shield rings on the coated half
-    for (const spark of sparksRef.current) {
-      const age = (now - spark.bornAt) / SPARK_LIFE;
-      const alpha = 1 - age;
-      const radius = 16 + age * 26;
-
-      const grad = ctx.createRadialGradient(
-        spark.x,
-        spark.y,
-        0,
-        spark.x,
-        spark.y,
-        radius
-      );
-      grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-      grad.addColorStop(0.35, `rgba(167,243,208,${alpha * 0.7})`);
-      grad.addColorStop(1, "rgba(167,243,208,0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(
-        spark.x - radius,
-        spark.y - radius,
-        radius * 2,
-        radius * 2
-      );
-
-      ctx.strokeStyle = `rgba(34,197,94,${alpha * 0.7})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(spark.x, spark.y, radius * 0.85, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // tiny sparkle dots
-      for (let i = 0; i < 4; i++) {
-        const angle = (i / 4) * Math.PI * 2 + age * 4;
-        const r = radius * (0.6 + age * 0.5);
-        const sx = spark.x + Math.cos(angle) * r;
-        const sy = spark.y + Math.sin(angle) * r;
-        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.9})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, 1.6, 0, Math.PI * 2);
-        ctx.fill();
+      sctx.lineCap = "round";
+      sctx.lineJoin = "round";
+      for (const stroke of strokesRef.current) {
+        if (stroke.points.length < 1) continue;
+        sctx.strokeStyle = "rgba(20,28,46,0.85)";
+        sctx.lineWidth = 2.6;
+        sctx.beginPath();
+        stroke.points.forEach((p, i) => {
+          if (i === 0) sctx.moveTo(p.x, p.y);
+          else sctx.lineTo(p.x, p.y);
+        });
+        sctx.stroke();
+        // bright sliver above the groove for a cut-glass feel
+        sctx.strokeStyle = "rgba(255,255,255,0.45)";
+        sctx.lineWidth = 0.8;
+        sctx.beginPath();
+        stroke.points.forEach((p, i) => {
+          if (i === 0) sctx.moveTo(p.x - 0.8, p.y - 0.8);
+          else sctx.lineTo(p.x - 0.8, p.y - 0.8);
+        });
+        sctx.stroke();
       }
+      scratchTexture.needsUpdate = true;
     }
 
-    texture.needsUpdate = true;
+    // --- Right lens (sparks/shield) ---
+    const pctx = sparkCanvas.getContext("2d");
+    if (pctx) {
+      pctx.clearRect(0, 0, TEX_W, TEX_H);
+      pctx.fillStyle = "rgba(110,231,183,0.07)";
+      pctx.fillRect(0, 0, TEX_W, TEX_H);
+
+      for (const spark of sparksRef.current) {
+        const age = (now - spark.bornAt) / SPARK_LIFE;
+        const alpha = 1 - age;
+        const radius = 18 + age * 30;
+
+        const grad = pctx.createRadialGradient(
+          spark.x,
+          spark.y,
+          0,
+          spark.x,
+          spark.y,
+          radius
+        );
+        grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        grad.addColorStop(0.35, `rgba(167,243,208,${alpha * 0.7})`);
+        grad.addColorStop(1, "rgba(167,243,208,0)");
+        pctx.fillStyle = grad;
+        pctx.fillRect(
+          spark.x - radius,
+          spark.y - radius,
+          radius * 2,
+          radius * 2
+        );
+
+        pctx.strokeStyle = `rgba(34,197,94,${alpha * 0.7})`;
+        pctx.lineWidth = 2;
+        pctx.beginPath();
+        pctx.arc(spark.x, spark.y, radius * 0.85, 0, Math.PI * 2);
+        pctx.stroke();
+
+        for (let i = 0; i < 4; i++) {
+          const angle = (i / 4) * Math.PI * 2 + age * 4;
+          const r = radius * (0.6 + age * 0.5);
+          const sx = spark.x + Math.cos(angle) * r;
+          const sy = spark.y + Math.sin(angle) * r;
+          pctx.fillStyle = `rgba(255,255,255,${alpha * 0.9})`;
+          pctx.beginPath();
+          pctx.arc(sx, sy, 1.6, 0, Math.PI * 2);
+          pctx.fill();
+        }
+      }
+      sparkTexture.needsUpdate = true;
+    }
   });
 
-  const uvToCanvas = (
-    uv: THREE.Vector2
-  ): { x: number; y: number; side: "uncoated" | "coated" } => {
-    const x = uv.x * TEX_W;
-    const y = (1 - uv.y) * TEX_H;
-    const side: "uncoated" | "coated" = uv.x < 0.5 ? "uncoated" : "coated";
-    return { x, y, side };
+  const uvToTex = (uv: THREE.Vector2) => ({
+    x: uv.x * TEX_W,
+    y: (1 - uv.y) * TEX_H,
+  });
+
+  // Push the next stroke point — but skip ones that haven't moved far
+  // enough, and auto-roll into a new stroke when the current one fills
+  // up. Without this, sustained drags either burn through the point
+  // budget in a fraction of a second or freeze silently.
+  const pushStrokePoint = (x: number, y: number) => {
+    const cur = strokesRef.current[strokesRef.current.length - 1];
+    if (!cur) return;
+    const last = cur.points[cur.points.length - 1];
+    if (last) {
+      const dx = x - last.x;
+      const dy = y - last.y;
+      if (dx * dx + dy * dy < MIN_STROKE_STEP_PX * MIN_STROKE_STEP_PX) return;
+    }
+    if (cur.points.length >= MAX_POINTS_PER_STROKE) {
+      strokesRef.current.push({ points: [{ x, y }] });
+      if (strokesRef.current.length > MAX_STROKES) {
+        strokesRef.current.shift();
+      }
+    } else {
+      cur.points.push({ x, y });
+    }
   };
 
   const tryAddSpark = (x: number, y: number, now: number) => {
@@ -352,104 +374,116 @@ function Lens({
     sparksRef.current.push({ x, y, bornAt: now });
   };
 
+  const capturePointer = (e: ThreeEvent<PointerEvent>) => {
+    const target = e.target as Element & {
+      setPointerCapture?: (id: number) => void;
+    };
+    target.setPointerCapture?.(e.pointerId);
+  };
+
   return (
     <group>
-      {/* substrate body — extruded ellipse so the silhouette reads as a
-          real eyeglass lens. Local extrude depth maps to world Y after
-          the rotation, so a 0.5 depth + y=-0.3 position keeps the slab
-          spanning y=[-0.3, 0.2] (same volume as the old 8×0.5×5 box). */}
-      <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <extrudeGeometry
-          args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
-        />
-        <meshStandardMaterial
-          color="#A6BFE2"
-          roughness={0.4}
-          metalness={0.1}
-        />
-      </mesh>
-
-      {/* paintable top face — same ellipse outline so strokes/sparks
-          can never land outside the lens silhouette. */}
-      <mesh
-        geometry={paintGeometry}
-        position={[0, 0.21, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-          if (!e.uv) return;
-          e.stopPropagation();
-          const target = e.target as Element & {
-            setPointerCapture?: (id: number) => void;
-          };
-          target.setPointerCapture?.(e.pointerId);
-          const { x, y, side } = uvToCanvas(e.uv);
-          isDraggingRef.current = true;
-          lastSideRef.current = side;
-          const now = performance.now() / 1000;
-          if (side === "uncoated") {
+      {/* LEFT LENS — uncoated, accumulates real scratches */}
+      <group position={[LEFT_X, 0, 0]}>
+        <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <extrudeGeometry
+            args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
+          />
+          <meshStandardMaterial
+            color="#A6BFE2"
+            roughness={0.4}
+            metalness={0.1}
+          />
+        </mesh>
+        <mesh
+          geometry={leftPaintGeo}
+          position={[0, 0.21, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+            if (!e.uv) return;
+            e.stopPropagation();
+            capturePointer(e);
+            const { x, y } = uvToTex(e.uv);
+            isDraggingLeftRef.current = true;
             strokesRef.current.push({ points: [{ x, y }] });
             if (strokesRef.current.length > MAX_STROKES) {
               strokesRef.current.shift();
             }
             onScratchStart();
-          } else {
-            tryAddSpark(x, y, now);
+          }}
+          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
+            if (!isDraggingLeftRef.current || !e.uv) return;
+            const { x, y } = uvToTex(e.uv);
+            pushStrokePoint(x, y);
+          }}
+          onPointerUp={() => {
+            isDraggingLeftRef.current = false;
+          }}
+          onPointerLeave={() => {
+            isDraggingLeftRef.current = false;
+          }}
+        >
+          <meshBasicMaterial map={scratchTexture} transparent />
+        </mesh>
+      </group>
+
+      {/* RIGHT LENS — coated, sparks instead of scratches */}
+      <group position={[RIGHT_X, 0, 0]}>
+        <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <extrudeGeometry
+            args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
+          />
+          <meshStandardMaterial
+            color="#A6BFE2"
+            roughness={0.4}
+            metalness={0.1}
+          />
+        </mesh>
+        <mesh
+          geometry={rightPaintGeo}
+          position={[0, 0.21, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+            if (!e.uv) return;
+            e.stopPropagation();
+            capturePointer(e);
+            const { x, y } = uvToTex(e.uv);
+            isDraggingRightRef.current = true;
+            tryAddSpark(x, y, performance.now() / 1000);
             onProtectStart();
-          }
-        }}
-        onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-          if (!isDraggingRef.current || !e.uv) return;
-          const { x, y, side } = uvToCanvas(e.uv);
-          const now = performance.now() / 1000;
-
-          if (side === "uncoated") {
-            if (lastSideRef.current !== "uncoated") {
-              strokesRef.current.push({ points: [{ x, y }] });
-              if (strokesRef.current.length > MAX_STROKES) {
-                strokesRef.current.shift();
-              }
-            } else {
-              const cur = strokesRef.current[strokesRef.current.length - 1];
-              if (cur && cur.points.length < MAX_POINTS_PER_STROKE) {
-                cur.points.push({ x, y });
-              }
-            }
-            lastSideRef.current = "uncoated";
-          } else {
-            tryAddSpark(x, y, now);
-            lastSideRef.current = "coated";
-          }
-        }}
-        onPointerUp={() => {
-          isDraggingRef.current = false;
-          lastSideRef.current = null;
-        }}
-        onPointerLeave={() => {
-          isDraggingRef.current = false;
-          lastSideRef.current = null;
-        }}
-      >
-        <meshBasicMaterial map={texture} transparent />
-      </mesh>
-
-      {/* coated half — half-ellipse plate hugging the right half of
-          the lens silhouette. */}
-      <mesh
-        position={[0, 0.27, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        raycast={() => null}
-      >
-        <shapeGeometry args={[coatingShape]} />
-        <meshStandardMaterial
-          color="#7B61FF"
-          transparent
-          opacity={0.18}
-          roughness={0.05}
-          metalness={0.45}
-          emissive="#7B61FF"
-          emissiveIntensity={0.06}
-        />
-      </mesh>
+          }}
+          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
+            if (!isDraggingRightRef.current || !e.uv) return;
+            const { x, y } = uvToTex(e.uv);
+            tryAddSpark(x, y, performance.now() / 1000);
+          }}
+          onPointerUp={() => {
+            isDraggingRightRef.current = false;
+          }}
+          onPointerLeave={() => {
+            isDraggingRightRef.current = false;
+          }}
+        >
+          <meshBasicMaterial map={sparkTexture} transparent />
+        </mesh>
+        {/* Coating overlay — full ellipse, glossy violet */}
+        <mesh
+          position={[0, 0.27, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          raycast={() => null}
+        >
+          <shapeGeometry args={[lensShape]} />
+          <meshStandardMaterial
+            color="#7B61FF"
+            transparent
+            opacity={0.22}
+            roughness={0.05}
+            metalness={0.45}
+            emissive="#7B61FF"
+            emissiveIntensity={0.08}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }
