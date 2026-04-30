@@ -1,15 +1,16 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 // 3D water-bead simulation for the hydrophobic coating "after" view.
 // Beads spawn near the top of a virtual lens disk, hover briefly under
 // surface tension, then accelerate down before fading at the bottom
-// and respawning. Beads use meshPhysicalMaterial with clearcoat so
-// they read as glossy *water*, plus a tiny offset highlight sphere to
-// fake the specular sun glint that makes a droplet feel wet.
+// and respawning. Each bead is a custom-revolved teardrop (pointy top,
+// rounded bottom) — the iconic water-drop silhouette — rendered with
+// meshPhysicalMaterial (clearcoat + transmission) so it reads as
+// glossy *water*, plus an offset highlight sphere for the sun glint.
 
 interface Drop {
   x: number;
@@ -27,10 +28,25 @@ const SPAWN_RANGE_X = 1.4;
 const SPAWN_Y_TOP = 1.05;
 const KILL_Y = -1.05;
 
-// Beads on a hydrophobic surface aren't perfect spheres — surface
-// tension flattens them slightly. Squashing Y reads more like water
-// than a marble.
-const BEAD_Y_SQUISH = 0.82;
+// Profile points (r, y) revolved around Y to form the bead silhouette.
+// y runs from -1 (rounded bottom) to ~+1.08 (pointy apex). r peaks
+// around y = 0.1 to give the recognizable teardrop bulge.
+const TEARDROP_PROFILE: Array<[number, number]> = [
+  [0.0, -1.0],
+  [0.34, -0.95],
+  [0.58, -0.82],
+  [0.76, -0.62],
+  [0.88, -0.36],
+  [0.95, -0.06],
+  [0.96, 0.18],
+  [0.9, 0.4],
+  [0.78, 0.6],
+  [0.6, 0.76],
+  [0.4, 0.88],
+  [0.22, 0.97],
+  [0.08, 1.04],
+  [0.0, 1.08],
+];
 
 export function HydroVisual3D() {
   return (
@@ -80,6 +96,23 @@ function DropField() {
   const beadRefs = useRef<(THREE.Mesh | null)[]>([]);
   const glintRefs = useRef<(THREE.Mesh | null)[]>([]);
 
+  // One geometry shared by every bead — drops scale their mesh
+  // independently rather than each owning a fresh allocation.
+  const dropGeometry = useMemo(() => {
+    const points = TEARDROP_PROFILE.map(
+      ([r, y]) => new THREE.Vector2(r, y)
+    );
+    const geo = new THREE.LatheGeometry(points, 36);
+    geo.computeVertexNormals();
+    return geo;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      dropGeometry.dispose();
+    };
+  }, [dropGeometry]);
+
   useFrame((_, dt) => {
     const drops = dropsRef.current;
 
@@ -109,23 +142,22 @@ function DropField() {
 
       const wobble =
         d.state === "settling" ? 1 + Math.sin(d.age * 8 + i) * 0.045 : 1;
-      const scaleX = d.size * wobble;
-      const scaleY = d.size * wobble * BEAD_Y_SQUISH;
-      const scaleZ = d.size * wobble;
+      const scale = d.size * wobble;
 
       if (bead) {
         bead.position.set(d.x, d.y, d.z);
-        bead.scale.set(scaleX, scaleY, scaleZ);
+        bead.scale.set(scale, scale, scale);
       }
       if (glint) {
         // Park the highlight on the upper-left shoulder of the bead
-        // so it reads like a single sun-glint per drop.
+        // (where the teardrop is widest) so it reads like a single
+        // sun-glint per drop.
         glint.position.set(
-          d.x - scaleX * 0.42,
-          d.y + scaleY * 0.46,
-          d.z + scaleZ * 0.55
+          d.x - scale * 0.5,
+          d.y + scale * 0.2,
+          d.z + scale * 0.78
         );
-        const glintSize = d.size * 0.22 * wobble;
+        const glintSize = d.size * 0.2 * wobble;
         glint.scale.setScalar(glintSize);
       }
     }
@@ -136,12 +168,12 @@ function DropField() {
       {dropsRef.current.map((_, i) => (
         <group key={i}>
           <mesh
+            geometry={dropGeometry}
             ref={(el) => {
               beadRefs.current[i] = el;
             }}
             raycast={() => null}
           >
-            <sphereGeometry args={[1, 32, 32]} />
             <meshPhysicalMaterial
               color="#DCEBFF"
               transparent
@@ -156,6 +188,7 @@ function DropField() {
               thickness={0.5}
               attenuationColor="#7AA8E0"
               attenuationDistance={1.4}
+              side={THREE.DoubleSide}
             />
           </mesh>
           <mesh
