@@ -26,6 +26,13 @@ const SPARK_LIFE = 0.75;
 const MAX_STROKES = 10;
 const MAX_POINTS_PER_STROKE = 120;
 
+// Eyeglass-lens silhouette dimensions (half-width / half-height).
+// The substrate, the paintable surface, and the coating overlay all
+// share this ellipse so the demo reads as a real lens rather than a
+// rectangular slab.
+const LENS_W = 4;
+const LENS_H = 2.5;
+
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
   const [protectCount, setProtectCount] = useState(0);
@@ -171,6 +178,54 @@ function Lens({
     return { canvasEl, texture };
   }, []);
 
+  // Full lens silhouette (ellipse) — used by the substrate body and
+  // the paintable top face.
+  const lensShape = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.absellipse(0, 0, LENS_W, LENS_H, 0, Math.PI * 2, false, 0);
+    return shape;
+  }, []);
+
+  // Right half of the same ellipse — closes a vertical line down the
+  // centerline so the coating plate exactly covers the "coated" side.
+  const coatingShape = useMemo(() => {
+    const shape = new THREE.Shape();
+    const segs = 48;
+    for (let i = 0; i <= segs; i++) {
+      const t = -Math.PI / 2 + (Math.PI * i) / segs;
+      const x = LENS_W * Math.cos(t);
+      const y = LENS_H * Math.sin(t);
+      if (i === 0) shape.moveTo(x, y);
+      else shape.lineTo(x, y);
+    }
+    shape.lineTo(0, -LENS_H);
+    return shape;
+  }, []);
+
+  // ShapeGeometry's default UVs are raw shape coordinates ([-LENS_W, LENS_W]
+  // × [-LENS_H, LENS_H]) which would push the canvas texture outside [0,1].
+  // Build the paint geometry once and remap UVs to a [0,1] bounding-box span
+  // so painting + side detection still work the same way they did with the
+  // old planeGeometry.
+  const paintGeometry = useMemo(() => {
+    const geo = new THREE.ShapeGeometry(lensShape, 64);
+    const positions = geo.attributes.position;
+    const uvs = geo.attributes.uv;
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i);
+      const y = positions.getY(i);
+      uvs.setXY(i, (x + LENS_W) / (LENS_W * 2), (y + LENS_H) / (LENS_H * 2));
+    }
+    uvs.needsUpdate = true;
+    return geo;
+  }, [lensShape]);
+
+  useEffect(() => {
+    return () => {
+      paintGeometry.dispose();
+    };
+  }, [paintGeometry]);
+
   useEffect(() => {
     strokesRef.current = [];
     sparksRef.current = [];
@@ -299,9 +354,14 @@ function Lens({
 
   return (
     <group>
-      {/* substrate body — gives the slab thickness */}
-      <mesh position={[0, -0.05, 0]}>
-        <boxGeometry args={[8, 0.5, 5]} />
+      {/* substrate body — extruded ellipse so the silhouette reads as a
+          real eyeglass lens. Local extrude depth maps to world Y after
+          the rotation, so a 0.5 depth + y=-0.3 position keeps the slab
+          spanning y=[-0.3, 0.2] (same volume as the old 8×0.5×5 box). */}
+      <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <extrudeGeometry
+          args={[lensShape, { depth: 0.5, bevelEnabled: false }]}
+        />
         <meshStandardMaterial
           color="#A6BFE2"
           roughness={0.4}
@@ -309,8 +369,10 @@ function Lens({
         />
       </mesh>
 
-      {/* paintable top face */}
+      {/* paintable top face — same ellipse outline so strokes/sparks
+          can never land outside the lens silhouette. */}
       <mesh
+        geometry={paintGeometry}
         position={[0, 0.21, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         onPointerDown={(e: ThreeEvent<PointerEvent>) => {
@@ -367,17 +429,17 @@ function Lens({
           lastSideRef.current = null;
         }}
       >
-        <planeGeometry args={[8, 5]} />
         <meshBasicMaterial map={texture} transparent />
       </mesh>
 
-      {/* coated half — glossy violet plate above the right side */}
+      {/* coated half — half-ellipse plate hugging the right half of
+          the lens silhouette. */}
       <mesh
-        position={[2, 0.27, 0]}
+        position={[0, 0.27, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         raycast={() => null}
       >
-        <planeGeometry args={[4, 5]} />
+        <shapeGeometry args={[coatingShape]} />
         <meshStandardMaterial
           color="#7B61FF"
           transparent
