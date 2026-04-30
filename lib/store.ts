@@ -68,9 +68,9 @@ const initialState = {
   primaryConcern: null as DiscomfortId | null,
   lensType: "single" as LensTypeId,
   singleTarget: "far" as SingleTarget,
-  selectedIndex: "1.67" as IndexId,
+  selectedIndex: "1.60" as IndexId,
   prescription: -4,
-  coatings: ["ar"] as CoatingId[],
+  coatings: [] as CoatingId[],
 };
 
 export const useWizard = create<WizardState>((set, get) => ({
