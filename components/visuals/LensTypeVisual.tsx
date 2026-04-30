@@ -283,19 +283,82 @@ function MonitorScene() {
             <stop offset="0" stopColor="#FAFCFF" />
             <stop offset="1" stopColor="#E9EFF8" />
           </linearGradient>
+          <linearGradient id="ms-bezel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#1A2030" />
+            <stop offset="0.06" stopColor="#0E1422" />
+            <stop offset="1" stopColor="#06080F" />
+          </linearGradient>
+          <linearGradient id="ms-stand" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#1A2236" />
+            <stop offset="1" stopColor="#080C16" />
+          </linearGradient>
         </defs>
 
         {/* desk surface */}
         <rect x="0" y="438" width="800" height="62" fill="#1F2A40" />
         <rect x="0" y="434" width="800" height="6" fill="#34405A" />
 
-        {/* stand */}
-        <rect x="385" y="402" width="30" height="34" fill="#11192B" rx="2" />
-        <rect x="325" y="428" width="150" height="14" rx="4" fill="#11192B" />
+        {/* monitor cast shadow on desk */}
+        <ellipse
+          cx="400"
+          cy="438"
+          rx="200"
+          ry="6"
+          fill="#000000"
+          opacity="0.55"
+        />
 
-        {/* monitor body + screen */}
-        <rect x="80" y="56" width="640" height="350" rx="14" fill="#0A0F1C" />
+        {/* stand: trapezoidal base + curved neck for depth */}
+        <path d="M 318 432 L 482 432 L 470 422 L 330 422 Z" fill="url(#ms-stand)" />
+        <rect x="316" y="430" width="168" height="4" rx="1.5" fill="#06080F" />
+        <path
+          d="M 386 408 Q 386 402 390 400 L 410 400 Q 414 402 414 408 L 414 422 L 386 422 Z"
+          fill="url(#ms-stand)"
+        />
+
+        {/* monitor body — thicker outer bezel + soft top highlight */}
+        <rect
+          x="72"
+          y="48"
+          width="656"
+          height="366"
+          rx="16"
+          fill="url(#ms-bezel)"
+        />
+        <rect x="78" y="50" width="644" height="1.5" fill="#FFFFFF" opacity="0.18" />
+        <rect x="78" y="52.5" width="644" height="0.5" fill="#FFFFFF" opacity="0.07" />
+
+        {/* inner bezel ring */}
+        <rect
+          x="86"
+          y="62"
+          width="628"
+          height="338"
+          rx="6"
+          fill="#06080F"
+        />
+
+        {/* screen */}
         <rect x="98" y="74" width="604" height="314" rx="5" fill="url(#ms-screen)" />
+
+        {/* screen inner top shadow for slight inset feel */}
+        <rect x="98" y="74" width="604" height="3" fill="#1A2030" opacity="0.4" />
+
+        {/* bottom-bezel brand mark + power LED */}
+        <text
+          x="400"
+          y="408"
+          textAnchor="middle"
+          fontSize="6"
+          fontWeight="800"
+          fontFamily="-apple-system, BlinkMacSystemFont, sans-serif"
+          fill="#1F2A40"
+          letterSpacing="2"
+        >
+          VISTA
+        </text>
+        <circle cx="700" cy="406" r="2.2" fill="#3182F6" opacity="0.9" />
+        <circle cx="700" cy="406" r="4" fill="#3182F6" opacity="0.25" />
 
         {/* browser top bar */}
         <rect x="98" y="74" width="604" height="32" fill="#E1E7F0" />
@@ -422,9 +485,6 @@ function MonitorScene() {
         <rect x="158" y="332" width="514" height="5" rx="1.5" fill="#D5DDE8" />
         <rect x="158" y="344" width="494" height="5" rx="1.5" fill="#D5DDE8" />
         <rect x="158" y="356" width="380" height="5" rx="1.5" fill="#D5DDE8" />
-
-        {/* power LED */}
-        <circle cx="400" cy="396" r="2" fill="#3182F6" opacity="0.85" />
       </svg>
     </div>
   );
@@ -447,31 +507,75 @@ function BookScene() {
           </linearGradient>
           <linearGradient id="bk-spine" x1="0" y1="0.5" x2="1" y2="0.5">
             <stop offset="0" stopColor="#C9B89A" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#5A4A30" stopOpacity="0.55" />
+            <stop offset="0.5" stopColor="#3A2A12" stopOpacity="0.7" />
             <stop offset="1" stopColor="#C9B89A" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="bk-cover" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#7A4F2A" />
+            <stop offset="0.5" stopColor="#5C3A1E" />
+            <stop offset="1" stopColor="#3F2614" />
           </linearGradient>
         </defs>
 
-        {/* table shadow */}
-        <ellipse cx="400" cy="460" rx="380" ry="22" fill="#120A04" opacity="0.7" />
+        {/* heavy table shadow under the book */}
+        <ellipse cx="400" cy="462" rx="380" ry="20" fill="#0A0500" opacity="0.75" />
+        <ellipse cx="400" cy="458" rx="350" ry="10" fill="#0A0500" opacity="0.45" />
 
-        {/* book block (page edges) */}
-        <rect x="74" y="84" width="652" height="350" fill="#E8DCB8" />
-        <rect x="74" y="84" width="652" height="4" fill="#C9B786" />
+        {/* hardback cover — sticks out a few px beyond the page block
+            on every side so the binding reads as a real hardcover */}
+        <rect x="56" y="74" width="688" height="368" rx="3" fill="url(#bk-cover)" />
+        {/* gold stamp/border line on cover */}
+        <rect
+          x="62"
+          y="80"
+          width="676"
+          height="356"
+          rx="2"
+          fill="none"
+          stroke="#A07A48"
+          strokeWidth="0.8"
+          opacity="0.55"
+        />
+        {/* subtle leather-like top sheen */}
+        <rect x="58" y="76" width="684" height="2" fill="#9A6638" opacity="0.6" />
 
-        {/* page surface */}
-        <rect x="80" y="80" width="640" height="346" fill="url(#bk-page)" />
+        {/* page block — the stack of pages, edges visible all around the
+            cover inset. Cream tone with thin gold gilt edges. */}
+        <rect x="74" y="84" width="652" height="350" fill="#EDE0BE" />
+        {/* gilt edges */}
+        <rect x="74" y="84" width="652" height="2" fill="#D4BC82" />
+        <rect x="74" y="432" width="652" height="2" fill="#A8946F" />
+        <rect x="74" y="84" width="2" height="350" fill="#D4BC82" />
+        <rect x="724" y="84" width="2" height="350" fill="#D4BC82" />
+        {/* faint horizontal lines suggesting individual pages on the edge */}
+        <g opacity="0.18">
+          {[88, 92, 96, 420, 424, 428].map((y) => (
+            <line key={y} x1="76" y1={y} x2="724" y2={y} stroke="#8A6A3A" strokeWidth="0.4" />
+          ))}
+        </g>
 
-        {/* spine shadow */}
-        <rect x="392" y="80" width="16" height="346" fill="url(#bk-spine)" />
+        {/* page surface — the spread we actually read */}
+        <rect x="80" y="88" width="640" height="342" fill="url(#bk-page)" />
+
+        {/* spine valley — deeper shadow + crease */}
+        <rect x="388" y="88" width="24" height="342" fill="url(#bk-spine)" />
         <line
           x1="400"
-          y1="80"
+          y1="88"
           x2="400"
-          y2="426"
-          stroke="#A8967A"
-          strokeWidth="1"
-          opacity="0.45"
+          y2="430"
+          stroke="#7A5A30"
+          strokeWidth="1.4"
+          opacity="0.55"
+        />
+        <line
+          x1="400"
+          y1="88"
+          x2="400"
+          y2="430"
+          stroke="#3A2A12"
+          strokeWidth="0.5"
+          opacity="0.7"
         />
 
         {/* LEFT PAGE */}

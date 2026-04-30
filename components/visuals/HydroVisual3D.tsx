@@ -22,30 +22,35 @@ interface Drop {
   state: "settling" | "rolling";
 }
 
-const NUM_DROPS = 11;
+const NUM_DROPS = 6;
 const LENS_RADIUS = 1.0;
-const SPAWN_RANGE_X = 1.4;
+const SPAWN_RANGE_X = 1.25;
 const SPAWN_Y_TOP = 1.05;
 const KILL_Y = -1.05;
 
 // Profile points (r, y) revolved around Y to form the bead silhouette.
-// y runs from -1 (rounded bottom) to ~+1.08 (pointy apex). r peaks
-// around y = 0.1 to give the recognizable teardrop bulge.
+// Engineered for the sharp classic water-drop look:
+// - rounded hemisphere bottom (y -1 → -0.2)
+// - wide belly peaking near y = 0
+// - long tapering upper third with a long, thin apex extending up
+//   to y ≈ 1.45 (taller than wide, so the silhouette reads as a
+//   pointed drop and not a potato).
 const TEARDROP_PROFILE: Array<[number, number]> = [
   [0.0, -1.0],
-  [0.34, -0.95],
+  [0.32, -0.94],
   [0.58, -0.82],
-  [0.76, -0.62],
-  [0.88, -0.36],
-  [0.95, -0.06],
-  [0.96, 0.18],
-  [0.9, 0.4],
-  [0.78, 0.6],
-  [0.6, 0.76],
-  [0.4, 0.88],
-  [0.22, 0.97],
-  [0.08, 1.04],
-  [0.0, 1.08],
+  [0.75, -0.66],
+  [0.86, -0.46],
+  [0.92, -0.22],
+  [0.94, 0.04],
+  [0.92, 0.28],
+  [0.82, 0.5],
+  [0.66, 0.68],
+  [0.46, 0.84],
+  [0.28, 0.98],
+  [0.14, 1.14],
+  [0.05, 1.3],
+  [0.0, 1.46],
 ];
 
 export function HydroVisual3D() {
@@ -149,15 +154,15 @@ function DropField() {
         bead.scale.set(scale, scale, scale);
       }
       if (glint) {
-        // Park the highlight on the upper-left shoulder of the bead
-        // (where the teardrop is widest) so it reads like a single
-        // sun-glint per drop.
+        // Park the highlight on the wide belly (just above the
+        // widest cross-section) so it reads like a single sun-glint
+        // sitting on the front of the drop.
         glint.position.set(
-          d.x - scale * 0.5,
-          d.y + scale * 0.2,
-          d.z + scale * 0.78
+          d.x - scale * 0.45,
+          d.y + scale * 0.1,
+          d.z + scale * 0.82
         );
-        const glintSize = d.size * 0.2 * wobble;
+        const glintSize = d.size * 0.18 * wobble;
         glint.scale.setScalar(glintSize);
       }
     }
