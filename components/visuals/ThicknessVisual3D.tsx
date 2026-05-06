@@ -1,11 +1,12 @@
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "framer-motion";
 import { type IndexId } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { KioskCanvas } from "./KioskCanvas";
 
 interface Props {
   index: IndexId;
@@ -32,6 +33,12 @@ const VIEW_POSITIONS: Record<View, [number, number, number]> = {
 
 const RADIUS_MM = 15;
 const CENTER_MM = 1.5;
+// Front-base-curve sag: vertical drop of the front surface from the
+// optical center (r=0) to the rim (r=RADIUS_MM). Real eyeglass lenses
+// use a fixed front base curve; varying index changes the back curve,
+// not the front. 1.2mm at R=15mm corresponds to roughly a 6-base curve
+// for n=1.56 — typical for a moderate minus prescription.
+const FRONT_SAG_MM = 1.2;
 
 // Real-world reference thicknesses (mm), used so users can ground "4mm"
 // against an object they hold every day.
@@ -60,11 +67,8 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
         }}
       />
 
-      <Canvas
-        dpr={[1, 2]}
+      <KioskCanvas
         camera={{ position: VIEW_POSITIONS.oblique, fov: 32, near: 0.1, far: 320 }}
-        gl={{ antialias: true, alpha: true }}
-        style={{ background: "transparent" }}
       >
         <ambientLight intensity={0.55} />
         <directionalLight position={[8, 10, 12]} intensity={1.0} color="#FFFFFF" />
@@ -81,7 +85,7 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
         )}
         <Lens edgeMM={edgeMM} centerMM={CENTER_MM} radiusMM={RADIUS_MM} />
         <RimHighlight edgeMM={edgeMM} radiusMM={RADIUS_MM} />
-      </Canvas>
+      </KioskCanvas>
 
       {/* view toggle */}
       <div className="absolute top-2.5 sm:top-4 left-1/2 -translate-x-1/2 z-10 inline-flex p-0.5 sm:p-1 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
@@ -90,6 +94,9 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
           return (
             <motion.button
               key={v}
+              type="button"
+              aria-pressed={active}
+              aria-label={`${VIEW_LABELS[v]} 시점으로 보기`}
               onClick={() => setView(v)}
               whileTap={{ scale: 0.96 }}
               className={cn(
@@ -116,7 +123,12 @@ export function ThicknessVisual3D({ index, thicknessFactor, prescription }: Prop
       </div>
 
       {/* edge thickness HUD — right side */}
-      <div className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center px-2 sm:px-2.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center px-2 sm:px-2.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-black/45 backdrop-blur-md border border-white/10"
+      >
         <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/55">
           가장자리
         </span>
@@ -349,6 +361,35 @@ function RimHighlight({ edgeMM, radiusMM }: { edgeMM: number; radiusMM: number }
   );
 }
 
+// Builds a meniscus lens profile (both surfaces curve in the same
+// direction, like a real eyeglass lens) where edge thickness equals
+// edgeMM exactly.
+//
+// Profile layout, in order, for LatheGeometry:
+//   1. Front surface, walking r from 0 (optical center) out to R.
+//   2. Rim wall at r=R, walking y down from front-edge to back-edge.
+//   3. Back surface, walking r from R back in to 0.
+//
+// Each item stores (r, alpha, beta) with y = alpha + beta * edgeMM,
+// so the live edge slider only updates y per vertex (r and the curve
+// shape stay constant — see applyEdgeToGeometry).
+//
+// Surface model:
+//   y_front(u) = c/2 - SAG_F · h(u)                       [u = r / R]
+//   y_back(u)  = -c/2 - SAG_F · h(u) - (e - c) · h(u)
+//   h(u) = 1 - sqrt(1 - u²)                              [spherical-cap sag]
+//
+// This gives a fixed front base curve (independent of e) and a back
+// curve that gets steeper as edge thickness grows — matching the
+// real-world relationship between index of refraction and back-curve
+// design. Center thickness = c, edge thickness = e, both exact.
+//
+// Decomposition for the edge-animated form:
+//   y_front: alpha = c/2 - SAG_F·h,                  beta = 0
+//   y_back:  alpha = -c/2 + h·(c - SAG_F),           beta = -h
+//   y_rim:   alpha = c/2 - SAG_F,                    beta = -t
+//     where rim t goes from 1/n to 1, taking y from the front edge
+//     down to the back edge (the rim's height is exactly e).
 function buildProfileSpec(
   centerMM: number,
   radiusMM: number,
@@ -357,23 +398,44 @@ function buildProfileSpec(
 ): ProfileItem[] {
   const items: ProfileItem[] = [];
   const cHalf = centerMM / 2;
-  // Front face: y = (c/2)(1 - tt) + (e/2) tt → α = (c/2)(1-tt), β = tt/2
+
+  // Front surface: r from 0 to R, fixed shape (no edge dependence).
   for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const tt = t * t * (3 - 2 * t);
-    items.push({ r: t * radiusMM, alpha: cHalf * (1 - tt), beta: tt / 2 });
+    const u = i / segments;
+    const h = 1 - Math.sqrt(Math.max(0, 1 - u * u));
+    items.push({
+      r: u * radiusMM,
+      alpha: cHalf - FRONT_SAG_MM * h,
+      beta: 0,
+    });
   }
-  // Outer rim: y goes from +e/2 to -e/2 → α = 0, β = 0.5 - t
+
+  // Rim wall at r=R: y descends from c/2 - SAG_F (front edge) to
+  // c/2 - SAG_F - e (back edge). Subdivisions keep the wall straight
+  // under perspective and let the wireframe ghost line up cleanly.
   for (let i = 1; i <= rimSubdivisions; i++) {
     const t = i / rimSubdivisions;
-    items.push({ r: radiusMM, alpha: 0, beta: 0.5 - t });
+    items.push({
+      r: radiusMM,
+      alpha: cHalf - FRONT_SAG_MM,
+      beta: -t,
+    });
   }
-  // Back face: y = -(c/2)(1-tt) - (e/2) tt → α = -(c/2)(1-tt), β = -tt/2
+
+  // Back surface: walk r from R back to 0. The curve parameter is
+  // u = 1 - t (mirrored from front) so the i=segments terminal point
+  // lands at the optical center.
   for (let i = 1; i <= segments; i++) {
     const t = i / segments;
-    const tt = t * t * (3 - 2 * t);
-    items.push({ r: radiusMM * (1 - t), alpha: -cHalf * (1 - tt), beta: -tt / 2 });
+    const u = 1 - t;
+    const h = 1 - Math.sqrt(Math.max(0, 1 - u * u));
+    items.push({
+      r: u * radiusMM,
+      alpha: -cHalf + h * (centerMM - FRONT_SAG_MM),
+      beta: -h,
+    });
   }
+
   return items;
 }
 

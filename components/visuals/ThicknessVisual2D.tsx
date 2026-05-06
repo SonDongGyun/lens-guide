@@ -30,7 +30,13 @@ export function ThicknessVisual2D({ index, thicknessFactor, prescription }: Prop
         }}
       />
 
-      <svg viewBox="0 0 800 500" className="absolute inset-0 w-full h-full">
+      <svg
+        viewBox="0 0 800 500"
+        className="absolute inset-0 w-full h-full"
+        role="img"
+        aria-label={`${index} 압축률 렌즈 측면도. 도수 ${prescription.toFixed(2)}D에서 가장자리 두께 약 ${(edge / 8).toFixed(1)}밀리미터.`}
+      >
+        <title>{`${index} 압축률 렌즈 측면도`}</title>
         <g stroke="#191F28" strokeWidth="3" fill="none" strokeLinecap="round">
           <path d="M 80 250 Q 200 220 360 235" />
           <path d="M 580 235 Q 660 245 720 260" />
@@ -86,6 +92,9 @@ export function ThicknessVisual2D({ index, thicknessFactor, prescription }: Prop
         {index} · 측면도
       </div>
       <motion.div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
         className="absolute top-1/2 right-8 -translate-y-1/2 text-right"
         key={index}
         initial={{ opacity: 0, x: 8 }}
@@ -119,6 +128,14 @@ export function ThicknessVisual2D({ index, thicknessFactor, prescription }: Prop
   );
 }
 
+// Meniscus bow at the optical center, in the same SVG y-direction for
+// both front and back surfaces — the visual signature of a real
+// eyeglass lens. Encoded as a Q-control offset; the visible curve
+// midpoint shifts by half this amount (Bezier midpoint = 0.5·control
+// + 0.5·corner-avg). 18px ≈ 1.125mm of midline shift at 8px/mm,
+// roughly matching the 3D front base curve.
+const BEND_PX = 18;
+
 function lensPath(edge: number, center: number) {
   const cx = 480;
   const lensWidth = 240;
@@ -127,10 +144,10 @@ function lensPath(edge: number, center: number) {
   const midY = 250;
 
   const topLeft = midY - edge / 2;
-  const topCenter = midY - center / 2;
+  const topCenter = midY - center / 2 - BEND_PX;
   const topRight = midY - edge / 2;
   const botLeft = midY + edge / 2;
-  const botCenter = midY + center / 2;
+  const botCenter = midY + center / 2 - BEND_PX;
   const botRight = midY + edge / 2;
 
   return `
