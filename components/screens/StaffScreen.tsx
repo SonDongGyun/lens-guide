@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { useEffect, useMemo, useState } from "react";
 import { saveConsultation, makeTicket } from "@/lib/storage";
 
+type ShareStatus = "" | "shared" | "copied" | "failed";
+
 export function StaffScreen() {
   const purposes = useWizard((s) => s.purposes);
   const discomforts = useWizard((s) => s.discomforts);
@@ -32,6 +34,78 @@ export function StaffScreen() {
     [lensType, selectedIndex, coatings]
   );
 
+  const staffBriefText = useMemo(
+    () => buildStaffBrief({ purposes, discomforts, primaryConcern, brief }),
+    [purposes, discomforts, primaryConcern, brief]
+  );
+
+  // Plain-text payload the customer can save off-app as a backup of
+  // their pre-visit selection. Web Share / clipboard both consume this.
+  const shareText = useMemo(
+    () =>
+      [
+        "LensGuide 상담 결과",
+        "",
+        `[상담 번호] ${ticket}`,
+        staffBriefText,
+        "",
+        "* 매장 방문 시 직원에게 보여주세요",
+        "* 본 결과는 시력 검사를 대체하지 않습니다",
+      ].join("\n"),
+    [ticket, staffBriefText]
+  );
+
+  const [shareStatus, setShareStatus] = useState<ShareStatus>("");
+
+  // Auto-clear so re-tapping the share button re-fires the aria-live
+  // announcement. Without this, identical consecutive statuses don't
+  // diff and AT stays silent on the second confirmation.
+  useEffect(() => {
+    if (!shareStatus) return;
+    const id = window.setTimeout(() => setShareStatus(""), 4000);
+    return () => window.clearTimeout(id);
+  }, [shareStatus]);
+
+  const handleShare = async () => {
+    if (typeof navigator === "undefined") return;
+
+    // Prefer the native share sheet — gives users iOS/Android-native
+    // entry points (Notes, Messages, AirDrop, Mail, etc.) instead of
+    // forcing the brief through clipboard middleware.
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "LensGuide 상담 결과",
+          text: shareText,
+        });
+        setShareStatus("shared");
+        return;
+      } catch (err) {
+        const name = (err as { name?: string } | null)?.name;
+        // User dismissed the share sheet — treat as a no-op rather
+        // than an error so we don't pollute aria-live.
+        if (name === "AbortError") return;
+        // Other failure (e.g., NotAllowedError on insecure context).
+        // Fall through to clipboard backup.
+      }
+    }
+
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function"
+    ) {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setShareStatus("copied");
+        return;
+      } catch {
+        /* fall through to failed */
+      }
+    }
+
+    setShareStatus("failed");
+  };
+
   // persist completed consultation once on mount
   useEffect(() => {
     saveConsultation({
@@ -51,7 +125,7 @@ export function StaffScreen() {
   }, []);
 
   return (
-    <div className="absolute inset-0 grid place-items-center px-5 sm:px-8 py-6 sm:py-10 overflow-y-auto">
+    <div className="absolute inset-0 grid place-items-center px-5 sm:px-8 py-6 sm:py-10 overflow-y-auto overscroll-contain">
       <div className="w-full max-w-3xl">
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
@@ -62,6 +136,7 @@ export function StaffScreen() {
           {/* check */}
           <div className="relative px-5 sm:px-10 pt-10 sm:pt-12 pb-6 sm:pb-8 text-center">
             <motion.div
+              aria-hidden="true"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 250, damping: 18, delay: 0.15 }}
@@ -102,7 +177,7 @@ export function StaffScreen() {
               transition={{ delay: 0.65 }}
               className="mt-2 text-ink-500 text-balance"
             >
-              이 화면을 직원에게 보여주세요.
+              매장 방문 시 이 화면을 직원에게 보여주세요.
             </motion.p>
           </div>
 
@@ -122,7 +197,7 @@ export function StaffScreen() {
                 <div className="mt-1 font-num text-2xl font-bold text-ink-900 tracking-tight">
                   #{ticket.split("-").slice(-1)[0]}
                 </div>
-                <div className="text-[10px] text-ink-300 font-num tracking-wider mt-0.5">
+                <div className="text-[10px] text-ink-400 font-num tracking-wider mt-0.5">
                   {ticket}
                 </div>
               </div>
@@ -144,19 +219,51 @@ export function StaffScreen() {
             </div>
             <div className="p-5 rounded-2xl bg-ink-900 text-white">
               <div className="text-base font-medium leading-relaxed">
-                {buildStaffBrief({
-                  purposes,
-                  discomforts,
-                  primaryConcern,
-                  brief,
-                })}
+                {staffBriefText}
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-center">
+            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleShare}
+                aria-label="결과를 휴대폰에 저장하거나 공유하기"
+              >
+                <svg
+                  aria-hidden="true"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className="mr-2"
+                >
+                  <path
+                    d="M10 3v9m0-9L7 6m3-3l3 3M5 12v3a2 2 0 002 2h6a2 2 0 002-2v-3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                결과 저장하기
+              </Button>
               <Button variant="secondary" size="lg" onClick={reset}>
                 처음으로
               </Button>
+            </div>
+            <div
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="mt-3 text-center text-xs text-ink-500 leading-relaxed min-h-[1.25rem]"
+            >
+              {shareStatus === "shared" &&
+                "결과를 저장했어요. 매장에서 직원에게 보여주세요."}
+              {shareStatus === "copied" &&
+                "결과를 클립보드에 복사했어요. 메모 등에 붙여넣을 수 있어요."}
+              {shareStatus === "failed" &&
+                "공유에 실패했어요. 화면 캡처로 대신 저장해주세요."}
             </div>
           </div>
         </motion.div>
@@ -165,7 +272,7 @@ export function StaffScreen() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="mt-6 text-center text-xs text-ink-300"
+          className="mt-6 text-center text-xs text-ink-400"
         >
           이 안내는 시력 검사를 대체하지 않으며, 정확한 처방은 매장 검안 후 결정됩니다.
         </motion.div>
