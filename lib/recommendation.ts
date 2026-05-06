@@ -79,6 +79,10 @@ export function recommend({
   else if (absRx >= 2) index = "1.60";
   else index = "1.56";
 
+  // Thin preference bumps the index up by one tier from the Rx baseline.
+  // Cascade is intentional: starting at 1.56 with wantsThin lands on 1.67,
+  // matching the in-store guidance that a thin-conscious customer with low
+  // Rx still benefits from the visible step beyond 1.60.
   if (wantsThin && index === "1.56") index = "1.60";
   if (wantsThin && index === "1.60") index = "1.67";
 
@@ -90,11 +94,10 @@ export function recommend({
 
   // -------- Coatings --------
   const coatings = new Set<CoatingId>();
-  // AR is almost always recommended baseline
+  // AR is recommended baseline regardless of input.
   coatings.add("ar");
 
   if (has(discomforts, "night_glare") || has(purposes, "driving")) {
-    coatings.add("ar");
     reasons.push("야간 운전·반사 불편이 확인되어 비반사(AR) 코팅을 기본으로 권장합니다.");
   }
   if (has(purposes, "screen") || has(discomforts, "eye_fatigue")) {
