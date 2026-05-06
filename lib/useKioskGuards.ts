@@ -1,79 +1,85 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useWizard, type ScreenId } from "./store";
-
-const IDLE_TIMEOUTS_MS: Partial<Record<ScreenId, number>> = {
-  // welcome already idle by definition
-  purpose: 90_000,
-  discomfort: 90_000,
-  "lens-type": 120_000, // visualization may invite longer dwell
-  thickness: 120_000,
-  coating: 120_000,
-  result: 60_000,
-  staff: 30_000, // next customer should be able to use immediately
-};
+import { useWizard } from "./store";
 
 /**
- * Wires kiosk-grade guards on the root page:
- *  - Idle auto-reset (per-screen timeout) → wizard.reset()
- *  - Browser back/forward block via history pushState trap
- *  - Refresh / unload doesn't need handling: wizard state is in-memory and resets
+ * Wires history-back interception so the system back gesture maps
+ * to wizard.prev() on non-welcome screens. On welcome we keep no
+ * sentinel — back exits the page in a single press, matching mobile
+ * expectations.
+ *
+ * Idle auto-reset was intentionally removed. This is a pre-visit
+ * mobile experience: users may put the phone down mid-flow, answer
+ * a call, switch apps for minutes at a time. Wiping state under
+ * them would punish exactly the patient reading we want to encourage.
+ * Cross-session resume is now covered by zustand persist (24h TTL).
+ *
+ * The hook keeps its name for the file's external surface but no
+ * longer enforces "kiosk" semantics — see useWizard's persist config
+ * and the Welcome screen for the new pre-visit framing.
  */
 export function useKioskGuards() {
   const screen = useWizard((s) => s.screen);
-  const reset = useWizard((s) => s.reset);
-  const lastActivityRef = useRef<number>(Date.now());
+  const sentinelRef = useRef(false);
+  // Set to true right before we synthetically pop our own sentinel so
+  // the popstate handler can tell user-initiated back from our own
+  // cleanup pop and skip prev() in the latter case.
+  const popGuardRef = useRef(false);
 
-  // ---- Idle auto-reset ----
+  // Always-attached popstate listener so welcome ↔ non-welcome
+  // transitions never miss an event. The sync effect below manages
+  // sentinel push/pop independently.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (screen === "welcome") return; // already at idle home
-
-    const timeout = IDLE_TIMEOUTS_MS[screen];
-    if (!timeout) return;
-
-    lastActivityRef.current = Date.now();
-
-    const bump = () => {
-      lastActivityRef.current = Date.now();
-    };
-
-    const events: (keyof WindowEventMap)[] = [
-      "pointerdown",
-      "pointermove",
-      "keydown",
-      "wheel",
-      "touchstart",
-    ];
-    events.forEach((e) => window.addEventListener(e, bump, { passive: true }));
-
-    const id = window.setInterval(() => {
-      const idle = Date.now() - lastActivityRef.current;
-      if (idle >= timeout) {
-        reset();
-      }
-    }, 2_000);
-
-    return () => {
-      events.forEach((e) => window.removeEventListener(e, bump));
-      window.clearInterval(id);
-    };
-  }, [screen, reset]);
-
-  // ---- Browser back/forward trap ----
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // push a sentinel state so the first back action lands on it (and we re-push)
-    window.history.pushState({ kiosk: true }, "", window.location.href);
 
     const onPop = () => {
-      // user pressed back — push a sentinel back so navigation stays put
-      window.history.pushState({ kiosk: true }, "", window.location.href);
+      if (popGuardRef.current) {
+        popGuardRef.current = false;
+        sentinelRef.current = false;
+        return;
+      }
+      if (useWizard.getState().screen === "welcome") {
+        // No sentinel is supposed to be active on welcome; let the
+        // navigation propagate so back exits the page.
+        return;
+      }
+      sentinelRef.current = false;
+      useWizard.getState().prev();
     };
 
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Keep the sentinel state aligned with the current wizard screen.
+  //  - welcome      → no sentinel (single back press exits the page)
+  //  - non-welcome  → exactly one sentinel on top of history
+  //
+  // When transitioning back to welcome from a non-welcome screen via
+  // the in-app footer ("이전"), there is a leftover sentinel we
+  // pushed earlier. We consume it via history.back() guarded with
+  // popGuardRef so the popstate handler doesn't run prev() again.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (screen === "welcome") {
+      if (sentinelRef.current) {
+        popGuardRef.current = true;
+        window.history.back();
+        // sentinelRef will be cleared by the popGuard branch in onPop.
+      }
+      return;
+    }
+
+    // If the current history entry is already our sentinel — for
+    // example, after a page refresh that preserved our pushed entry —
+    // don't double-push. Just claim it.
+    const cur = window.history.state as { wizard?: boolean } | null;
+    const alreadySentinel = !!(cur && cur.wizard === true);
+    if (!sentinelRef.current && !alreadySentinel) {
+      window.history.pushState({ wizard: true }, "", window.location.href);
+    }
+    sentinelRef.current = true;
+  }, [screen]);
 }

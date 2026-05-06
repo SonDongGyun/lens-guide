@@ -50,14 +50,17 @@ export function WelcomeScreen() {
             transition={{ delay: 0.1 }}
             className="flex items-center gap-2"
           >
-            <div className="w-9 h-9 rounded-2xl bg-ink-900 text-white grid place-items-center font-bold">
+            <div
+              aria-hidden="true"
+              className="w-9 h-9 rounded-2xl bg-ink-900 text-white grid place-items-center font-bold"
+            >
               L
             </div>
             <span className="font-bold tracking-tight text-ink-900 text-lg">
               LensGuide
             </span>
             <span className="ml-3 px-2.5 py-0.5 rounded-full bg-bg-muted text-xs font-semibold text-ink-500">
-              매장 안내
+              방문 전 안내
             </span>
           </motion.div>
         </div>
@@ -102,6 +105,7 @@ export function WelcomeScreen() {
             <Button variant="dark" size="lg" className="sm:h-16 sm:px-10 sm:text-xl sm:rounded-3xl" onClick={next}>
               지금 시작하기
               <svg
+                aria-hidden="true"
                 className="ml-2"
                 width="20"
                 height="20"
@@ -131,15 +135,16 @@ export function WelcomeScreen() {
             {QUICK_ENTRIES.map((q, i) => (
               <motion.button
                 key={q.label}
+                type="button"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.95 + i * 0.05 }}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => startWith(q)}
-                className="px-4 py-2.5 rounded-2xl bg-white border border-ink-50 hover:border-ink-100 hover:shadow-card transition-all flex items-center gap-2 text-sm font-medium text-ink-700"
+                className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-white border border-ink-50 hover:border-ink-100 hover:shadow-card transition-all flex items-center gap-2 text-sm font-medium text-ink-700"
               >
-                <span>{q.emoji}</span>
+                <span aria-hidden="true">{q.emoji}</span>
                 {q.label}
               </motion.button>
             ))}
@@ -150,10 +155,10 @@ export function WelcomeScreen() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.4 }}
-          className="text-xs text-ink-300 flex gap-4"
+          className="text-xs text-ink-400 flex gap-4"
         >
           <span>* 시력 검사를 대체하지 않습니다.</span>
-          <span>* 결과는 직원 상담 자료로 사용됩니다.</span>
+          <span>* 매장 방문 시 직원 상담 자료로 활용돼요.</span>
         </motion.div>
       </div>
 
