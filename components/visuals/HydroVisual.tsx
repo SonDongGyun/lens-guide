@@ -1,42 +1,28 @@
 "use client";
 
-import { Component, useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { detectWebGL } from "@/lib/webgl";
+import { use3DSupport, markUnsupported } from "@/lib/use3DSupport";
+import { ThreeBoundary } from "./ThreeBoundary";
 
 const HydroVisual3D = dynamic(
   () => import("./HydroVisual3D").then((m) => m.HydroVisual3D),
   { ssr: false, loading: () => null }
 );
 
-let cachedSupports3D: boolean | null = null;
-
 // Drop-in replacement for the static "after" hydrophobic visual.
 // Real WebGL → 3D rolling beads. No WebGL → 2D bobbing fallback.
 export function HydroVisual() {
-  const [supports3D, setSupports3D] = useState<boolean | null>(
-    () => cachedSupports3D
-  );
-
-  useEffect(() => {
-    if (cachedSupports3D === null) {
-      const detected = detectWebGL();
-      cachedSupports3D = detected;
-      setSupports3D(detected);
-    }
-  }, []);
+  const supports3D = use3DSupport();
 
   if (supports3D === null) return null;
   if (!supports3D) return <HydroDrops2D />;
 
   return (
     <ThreeBoundary
+      label="HydroVisual3D"
       fallback={<HydroDrops2D />}
-      onError={() => {
-        cachedSupports3D = false;
-        setSupports3D(false);
-      }}
+      onError={markUnsupported}
     >
       <HydroVisual3D />
     </ThreeBoundary>
@@ -56,7 +42,7 @@ function HydroDrops2D() {
     { left: 44, top: 78, size: 20, delay: 0.3 },
   ];
   return (
-    <>
+    <div aria-hidden="true">
       {drops.map((d, i) => (
         <motion.div
           key={i}
@@ -93,29 +79,6 @@ function HydroDrops2D() {
           />
         </motion.div>
       ))}
-    </>
+    </div>
   );
-}
-
-class ThreeBoundary extends Component<
-  { children: ReactNode; fallback: ReactNode; onError?: () => void },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: unknown) {
-    if (typeof console !== "undefined") {
-      console.warn("HydroVisual3D failed, falling back to 2D:", error);
-    }
-    this.props.onError?.();
-  }
-
-  render() {
-    if (this.state.hasError) return this.props.fallback;
-    return this.props.children;
-  }
 }

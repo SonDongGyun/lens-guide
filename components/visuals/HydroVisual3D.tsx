@@ -1,8 +1,10 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
+import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
+import { KioskCanvas } from "./KioskCanvas";
 
 // 3D water-bead simulation for the hydrophobic coating "after" view.
 // Beads spawn near the top of a virtual lens disk, hover briefly under
@@ -58,12 +60,7 @@ const TEARDROP_PROFILE: Array<[number, number]> = [
 export function HydroVisual3D() {
   return (
     <div className="absolute inset-0">
-      <Canvas
-        camera={{ position: [0, 0, 4], fov: 30 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
-        style={{ background: "transparent" }}
-      >
+      <KioskCanvas camera={{ position: [0, 0, 4], fov: 30 }}>
         <ambientLight intensity={0.45} />
         <hemisphereLight args={["#CFE1FF", "#1A2240", 0.4]} />
         <directionalLight
@@ -78,7 +75,7 @@ export function HydroVisual3D() {
         />
         <pointLight position={[0, 2.5, 3]} intensity={0.5} color="#FFFFFF" />
         <DropField />
-      </Canvas>
+      </KioskCanvas>
     </div>
   );
 }
@@ -102,6 +99,7 @@ function DropField() {
   );
   const beadRefs = useRef<(THREE.Mesh | null)[]>([]);
   const glintRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const reducedMotion = useReducedMotion();
 
   // One geometry shared by every bead — drops scale their mesh
   // independently rather than each owning a fresh allocation.
@@ -125,30 +123,38 @@ function DropField() {
 
     for (let i = 0; i < drops.length; i++) {
       const d = drops[i];
-      d.age += dt;
       const bead = beadRefs.current[i];
       const glint = glintRefs.current[i];
 
-      if (d.state === "settling") {
-        if (d.age > 0.6 + (i % 3) * 0.18) {
-          d.state = "rolling";
+      // Skip continuous physics when the user prefers reduced motion —
+      // drops freeze at their initial spawn positions. Mesh sync still
+      // runs so refs that mount after the first tick get placed.
+      if (!reducedMotion) {
+        d.age += dt;
+
+        if (d.state === "settling") {
+          if (d.age > 0.6 + (i % 3) * 0.18) {
+            d.state = "rolling";
+          }
+        }
+
+        if (d.state === "rolling") {
+          d.vy += dt * 0.6;
+          d.y -= d.vy * dt;
+          // slight horizontal drift along curvature
+          d.x += Math.sin(d.age * 2 + i) * dt * 0.04;
+        }
+
+        // respawn when off the bottom or outside the disk radius
+        if (d.y < KILL_Y || Math.hypot(d.x, d.y) > LENS_RADIUS + 0.1) {
+          Object.assign(d, makeDrop(0));
         }
       }
 
-      if (d.state === "rolling") {
-        d.vy += dt * 0.6;
-        d.y -= d.vy * dt;
-        // slight horizontal drift along curvature
-        d.x += Math.sin(d.age * 2 + i) * dt * 0.04;
-      }
-
-      // respawn when off the bottom or outside the disk radius
-      if (d.y < KILL_Y || Math.hypot(d.x, d.y) > LENS_RADIUS + 0.1) {
-        Object.assign(d, makeDrop(0));
-      }
-
       const wobble =
-        d.state === "settling" ? 1 + Math.sin(d.age * 8 + i) * 0.045 : 1;
+        !reducedMotion && d.state === "settling"
+          ? 1 + Math.sin(d.age * 8 + i) * 0.045
+          : 1;
       const scale = d.size * wobble;
 
       if (bead) {

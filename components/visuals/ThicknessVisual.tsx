@@ -1,9 +1,9 @@
 "use client";
 
-import { Component, useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { IndexId } from "@/lib/data";
-import { detectWebGL } from "@/lib/webgl";
+import { use3DSupport, markUnsupported } from "@/lib/use3DSupport";
+import { ThreeBoundary } from "./ThreeBoundary";
 import { ThicknessVisual2D } from "./ThicknessVisual2D";
 
 interface Props {
@@ -17,34 +17,17 @@ const ThicknessVisual3D = dynamic(
   { ssr: false, loading: () => <Skeleton /> }
 );
 
-// Module-scope cache: persists the 3D-support decision across mounts within the
-// same session so that once we fall back to 2D (WebGL absent or canvas threw at
-// runtime), we never re-attempt the 3D path until the page reloads.
-let cachedSupports3D: boolean | null = null;
-
 export function ThicknessVisual(props: Props) {
-  const [supports3D, setSupports3D] = useState<boolean | null>(
-    () => cachedSupports3D
-  );
-
-  useEffect(() => {
-    if (cachedSupports3D === null) {
-      const detected = detectWebGL();
-      cachedSupports3D = detected;
-      setSupports3D(detected);
-    }
-  }, []);
+  const supports3D = use3DSupport();
 
   if (supports3D === null) return <Skeleton />;
   if (!supports3D) return <ThicknessVisual2D {...props} />;
 
   return (
     <ThreeBoundary
+      label="ThicknessVisual3D"
       fallback={<ThicknessVisual2D {...props} />}
-      onError={() => {
-        cachedSupports3D = false;
-        setSupports3D(false);
-      }}
+      onError={markUnsupported}
     >
       <ThicknessVisual3D {...props} />
     </ThreeBoundary>
@@ -53,7 +36,12 @@ export function ThicknessVisual(props: Props) {
 
 function Skeleton() {
   return (
-    <div className="w-full aspect-[16/10] rounded-3xl bg-gradient-to-br from-[#1A2240] via-[#0F1428] to-[#0D1320] shadow-card relative overflow-hidden border border-ink-100">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className="w-full aspect-[16/10] rounded-3xl bg-gradient-to-br from-[#1A2240] via-[#0F1428] to-[#0D1320] shadow-card relative overflow-hidden border border-ink-100"
+    >
       <div
         aria-hidden
         className="absolute inset-0 opacity-60"
@@ -75,27 +63,4 @@ function Skeleton() {
       </div>
     </div>
   );
-}
-
-class ThreeBoundary extends Component<
-  { children: ReactNode; fallback: ReactNode; onError?: () => void },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: unknown) {
-    if (typeof console !== "undefined") {
-      console.warn("ThicknessVisual3D failed, falling back to 2D:", error);
-    }
-    this.props.onError?.();
-  }
-
-  render() {
-    if (this.state.hasError) return this.props.fallback;
-    return this.props.children;
-  }
 }

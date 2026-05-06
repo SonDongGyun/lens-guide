@@ -1,10 +1,11 @@
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { KioskCanvas } from "./KioskCanvas";
 
 // Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
 // uncoated lens on the left accumulates real grooves; the coated lens
@@ -75,11 +76,9 @@ export function ScratchVisual3D() {
         <Counter label="코팅 보호" value={protectCount} variant="good" />
       </div>
 
-      <Canvas
+      <KioskCanvas
         camera={{ position: [0, 5.5, 9.5], fov: 32, near: 0.1, far: 100 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
-        style={{ background: "transparent", touchAction: "none" }}
+        style={{ touchAction: "none" }}
       >
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 11, 7]} intensity={1.35} color="#FFFFFF" />
@@ -97,7 +96,7 @@ export function ScratchVisual3D() {
             setHasInteracted(true);
           }}
         />
-      </Canvas>
+      </KioskCanvas>
 
       <div className="absolute bottom-12 sm:bottom-14 left-0 right-0 z-10 pointer-events-none flex">
         <div className="flex-1 text-center">
@@ -127,7 +126,7 @@ export function ScratchVisual3D() {
         초기화
       </motion.button>
 
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 text-ink-300 text-[8px] sm:text-[9px] font-medium tracking-wide pointer-events-none whitespace-nowrap">
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 text-ink-500 text-[8px] sm:text-[9px] font-medium tracking-wide pointer-events-none whitespace-nowrap">
         * 강한 마찰엔 손상될 수 있어요
       </div>
     </div>
