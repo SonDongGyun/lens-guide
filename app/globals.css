@@ -54,6 +54,14 @@
   }
 
   .gradient-text {
+    /* Fallback for engines that don't support background-clip: text or
+       -webkit-text-fill-color (older Edge, some print stylesheets). The
+       solid color is overridden by -webkit-text-fill-color: transparent
+       on supporting browsers, which then reveals the gradient via the
+       background-clip mask. Without the fallback, unsupported engines
+       render the heading as the parent's color (often invisible on
+       same-color hero panels). */
+    color: #1B64DA;
     background: linear-gradient(135deg, #3182F6 0%, #7B61FF 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -73,4 +81,31 @@
 button, [role="button"] {
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Default keyboard focus indicator. Tailwind utilities like
+   focus:outline-none (used by the shared Button) win on specificity, so
+   their custom rings still apply. This is the fallback for the many
+   motion.button instances on screens that don't define their own
+   focus styles, ensuring WCAG 2.4.7 (Focus Visible) on keyboard nav. */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #3182F6;
+  outline-offset: 2px;
+}
+
+/* Vestibular safety: neutralize CSS keyframe animations (Tailwind's
+   animate-pulse on the Welcome status dot, etc.) and transitions when
+   the OS setting is on. Framer Motion is handled via MotionConfig
+   reducedMotion="user" in app/page.tsx — that's a separate path
+   because framer-motion drives animations from JS, not CSS animation.
+   The 0.01ms keeps the property defined so layout doesn't jump,
+   while making the change effectively instant. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

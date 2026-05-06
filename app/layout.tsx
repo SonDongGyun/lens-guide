@@ -17,9 +17,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: "#F9FAFB",
+  // viewport-fit=cover lets the page extend under the iOS notch/home
+  // indicator so env(safe-area-inset-*) reports non-zero — without it
+  // KioskFrame's safe-area padding silently no-ops on notched iPhones.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

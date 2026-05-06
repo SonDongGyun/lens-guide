@@ -1,8 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import type { LensTypeId } from "@/lib/data";
 import { cn } from "@/lib/utils";
+
+const SCENE_SIZES = "(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw";
 
 interface Props {
   lensType: LensTypeId;
@@ -208,15 +211,20 @@ function SceneBand({ id }: { id: SceneId }) {
 function SceneImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="w-full h-full relative overflow-hidden">
-      <img
+      <Image
         src={src}
+        alt=""
         aria-hidden
-        className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-95"
+        fill
+        sizes={SCENE_SIZES}
+        className="object-cover scale-110 blur-2xl opacity-95"
       />
-      <img
+      <Image
         src={src}
         alt={alt}
-        className="absolute inset-0 w-full h-full object-contain"
+        fill
+        sizes={SCENE_SIZES}
+        className="object-contain"
       />
     </div>
   );

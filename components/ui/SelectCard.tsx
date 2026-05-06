@@ -24,6 +24,8 @@ export function SelectCard({
 }: SelectCardProps) {
   return (
     <motion.button
+      type="button"
+      aria-pressed={selected}
       onClick={onClick}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -41,6 +43,7 @@ export function SelectCard({
     >
       {emoji && (
         <div
+          aria-hidden="true"
           className={cn(
             "shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl transition-colors",
             selected ? "bg-white" : "bg-bg-muted"
@@ -70,6 +73,7 @@ export function SelectCard({
         )}
       </div>
       <motion.div
+        aria-hidden="true"
         animate={{
           scale: selected ? 1 : 0.6,
           opacity: selected ? 1 : 0,

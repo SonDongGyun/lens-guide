@@ -18,7 +18,7 @@ export function ThicknessScreen() {
   const info = INDEXES.find((i) => i.id === selected)!;
 
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
+    <div className="h-full overflow-y-auto overscroll-contain px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-7xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 4"
@@ -56,9 +56,11 @@ export function ThicknessScreen() {
                     return (
                       <button
                         key={rx}
+                        type="button"
+                        aria-pressed={active}
                         onClick={() => setPrescription(rx)}
                         className={cn(
-                          "px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all font-num",
+                          "min-h-[44px] min-w-[44px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all font-num",
                           active
                             ? "bg-ink-900 text-white shadow-md"
                             : "bg-bg-muted text-ink-500 hover:bg-ink-50"
@@ -77,9 +79,11 @@ export function ThicknessScreen() {
                 step={0.25}
                 value={prescription}
                 onChange={(e) => setPrescription(Number(e.target.value))}
+                aria-label="내 도수 (디옵터)"
+                aria-valuetext={`${prescription.toFixed(2)} 디옵터`}
                 className="w-full accent-brand h-2 mt-3"
               />
-              <div className="flex justify-between text-[10px] sm:text-xs text-ink-300 mt-1 font-num">
+              <div className="flex justify-between text-[10px] sm:text-xs text-ink-400 mt-1 font-num">
                 <span>-0.50D</span>
                 <span>-5.00D</span>
                 <span>-10.00D</span>
@@ -97,6 +101,8 @@ export function ThicknessScreen() {
               return (
                 <motion.button
                   key={opt.id}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => setIndex(opt.id as IndexId)}
                   whileTap={{ scale: 0.98 }}
                   whileHover={{ y: -2 }}
@@ -166,10 +172,15 @@ export function ThicknessScreen() {
 
 function PriceTier({ tier, active }: { tier: number; active: boolean }) {
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
+    <div
+      role="img"
+      aria-label={`가격대 ${tier} / 4`}
+      className="flex items-center gap-0.5 shrink-0"
+    >
       {Array.from({ length: 4 }).map((_, i) => (
         <span
           key={i}
+          aria-hidden="true"
           className={cn(
             "text-base font-bold",
             i < tier
@@ -194,7 +205,7 @@ function Bar({ label, value, active }: { label: string; value: number; active: b
       <div
         className={cn(
           "text-[10px] font-semibold uppercase tracking-wider mb-1",
-          active ? "text-white/60" : "text-ink-300"
+          active ? "text-white/60" : "text-ink-400"
         )}
       >
         {label}

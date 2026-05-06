@@ -16,7 +16,9 @@ export function KioskFrame({ children, showFooter = true, primary, secondary }: 
   const screen = useWizard((s) => s.screen);
 
   return (
-    <div className="h-dvh w-screen flex flex-col overflow-hidden">
+    <div
+      className="h-dvh w-screen flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
+    >
       {/* TOP: progress */}
       {screen !== "welcome" && screen !== "staff" && (
         <motion.div
@@ -61,6 +63,7 @@ export function KioskFrame({ children, showFooter = true, primary, secondary }: 
             >
               {primary.label}
               <svg
+                aria-hidden="true"
                 className="ml-1.5 sm:ml-2"
                 width="18"
                 height="18"

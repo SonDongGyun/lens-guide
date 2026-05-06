@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export function HeroLens() {
   return (
-    <div className="relative w-full h-full">
+    <div aria-hidden="true" className="relative w-full h-full">
       {/* Soft animated gradient backdrop */}
       <motion.div
         aria-hidden

@@ -56,13 +56,16 @@ function CompareView({ id }: { id: CompareCoatingId }) {
   const labels = COMPARE_LABELS[id];
 
   return (
-    <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card select-none">
-      <SceneCompose id={id} after />
+    <div className="relative w-full aspect-[16/10] rounded-3xl overflow-hidden border border-ink-50 shadow-card select-none has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand/50">
+      <div aria-hidden="true" className="absolute inset-0">
+        <SceneCompose id={id} after />
+      </div>
 
       {/* BEFORE layer shares the card's coordinate frame; clip-path reveals
           0..split% of the card so element positions stay aligned with AFTER
           even at extreme slider positions. */}
       <div
+        aria-hidden="true"
         className="absolute inset-0"
         style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
       >
@@ -70,6 +73,7 @@ function CompareView({ id }: { id: CompareCoatingId }) {
       </div>
 
       <motion.div
+        aria-hidden="true"
         className="absolute top-0 bottom-0 w-1 bg-white shadow-elevated cursor-ew-resize z-20"
         style={{ left: `calc(${split}% - 2px)` }}
         drag="x"
@@ -97,7 +101,8 @@ function CompareView({ id }: { id: CompareCoatingId }) {
       </motion.div>
 
       <input
-        aria-label="Coating compare slider"
+        aria-label="코팅 비교 슬라이더"
+        aria-valuetext={`코팅 적용 ${Math.round(split)}%`}
         type="range"
         min={5}
         max={95}

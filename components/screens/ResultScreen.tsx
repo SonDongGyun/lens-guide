@@ -31,7 +31,7 @@ export function ResultScreen() {
   const brief = buildSelectionBrief(lensType, selectedIndex, coatings);
 
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
+    <div className="h-full overflow-y-auto overscroll-contain px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-6xl mx-auto pt-4">
         <SectionTitle
           eyebrow="MY LENS"
@@ -73,6 +73,7 @@ export function ResultScreen() {
                 </div>
               </div>
               <motion.div
+                aria-hidden="true"
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="shrink-0 w-12 h-12 sm:w-20 sm:h-20 rounded-full"
@@ -116,7 +117,10 @@ export function ResultScreen() {
           className="mt-5 sm:mt-6 p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-card"
         >
           <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <div className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-soft text-brand grid place-items-center">
+            <div
+              aria-hidden="true"
+              className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-soft text-brand grid place-items-center"
+            >
               💡
             </div>
             <div className="min-w-0">
@@ -144,55 +148,27 @@ export function ResultScreen() {
           </ul>
         </motion.div>
 
-        {/* mobile: single combined card with stacked rows */}
-        <div className="sm:hidden mt-5 p-4 rounded-2xl bg-white border border-ink-50 shadow-soft">
-          <CompactRow
+        {/* Summary — single grid, stacks on mobile, 2-col on sm+ */}
+        <div className="mt-5 sm:mt-6 grid sm:grid-cols-2 gap-3 sm:gap-4">
+          <SummarySection
             emoji="🎯"
             title="사용 환경"
             chips={purposes.map(
               (id) => PURPOSES.find((p) => p.id === id)?.label ?? id
             )}
-            empty="선택 없음"
           />
-          <div className="my-3 h-px bg-ink-50" />
-          <CompactRow
+          <SummarySection
             emoji="💢"
             title="현재 불편"
             chips={discomforts.map(
               (id) => DISCOMFORTS.find((d) => d.id === id)?.label ?? id
             )}
-            empty="선택 없음"
             primary={
               primaryConcern
                 ? DISCOMFORTS.find((d) => d.id === primaryConcern)?.label
                 : undefined
             }
           />
-        </div>
-
-        {/* sm+: 2-column summary grid */}
-        <div className="hidden sm:grid md:grid-cols-2 gap-4 mt-6">
-          <SummaryCard title="사용 환경" emoji="🎯">
-            <ChipRow
-              chips={purposes.map(
-                (id) => PURPOSES.find((p) => p.id === id)?.label ?? id
-              )}
-              empty="선택 없음"
-            />
-          </SummaryCard>
-          <SummaryCard title="현재 불편" emoji="💢">
-            <ChipRow
-              chips={discomforts.map(
-                (id) => DISCOMFORTS.find((d) => d.id === id)?.label ?? id
-              )}
-              empty="선택 없음"
-              primary={
-                primaryConcern
-                  ? DISCOMFORTS.find((d) => d.id === primaryConcern)?.label
-                  : undefined
-              }
-            />
-          </SummaryCard>
         </div>
 
         {/* disclaimer */}
@@ -224,92 +200,37 @@ function Highlight({
   );
 }
 
-function SummaryCard({
-  title,
+function SummarySection({
   emoji,
-  children,
+  title,
+  chips,
+  primary,
 }: {
-  title: string;
   emoji: string;
-  children: React.ReactNode;
+  title: string;
+  chips: string[];
+  primary?: string;
 }) {
   return (
     <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-soft">
-      <div className="flex items-center gap-2 mb-2.5 sm:mb-3">
-        <span className="text-lg sm:text-xl">{emoji}</span>
+      <div className="flex items-center gap-2 mb-2 sm:mb-3">
+        <span aria-hidden="true" className="text-base sm:text-xl">
+          {emoji}
+        </span>
         <span className="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-ink-400">
           {title}
         </span>
       </div>
-      {children}
-    </div>
-  );
-}
-
-function ChipRow({
-  chips,
-  empty,
-  primary,
-}: {
-  chips: string[];
-  empty: string;
-  primary?: string;
-}) {
-  if (chips.length === 0)
-    return <div className="text-sm text-ink-300">{empty}</div>;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {chips.map((c) => {
-        const isPrimary = primary && c === primary;
-        return (
-          <span
-            key={c}
-            className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
-              isPrimary
-                ? "bg-ink-900 text-white"
-                : "bg-bg-muted text-ink-700"
-            }`}
-          >
-            {isPrimary && "⭐ "}
-            {c}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-function CompactRow({
-  emoji,
-  title,
-  chips,
-  empty,
-  primary,
-}: {
-  emoji: string;
-  title: string;
-  chips: string[];
-  empty: string;
-  primary?: string;
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-sm">{emoji}</span>
-        <span className="text-[10px] font-bold tracking-wider uppercase text-ink-400">
-          {title}
-        </span>
-      </div>
       {chips.length === 0 ? (
-        <div className="text-xs text-ink-300">{empty}</div>
+        <div className="text-xs sm:text-sm text-ink-400">선택 없음</div>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {chips.map((c) => {
             const isPrimary = primary && c === primary;
             return (
               <span
                 key={c}
-                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold ${
                   isPrimary
                     ? "bg-ink-900 text-white"
                     : "bg-bg-muted text-ink-700"

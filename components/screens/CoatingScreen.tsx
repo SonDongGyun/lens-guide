@@ -17,7 +17,7 @@ export function CoatingScreen() {
   const isApplied = coatings.includes(active);
 
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
+    <div className="h-full overflow-y-auto overscroll-contain px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-7xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 5"
@@ -42,11 +42,13 @@ export function CoatingScreen() {
                 return (
                   <motion.button
                     key={c.id}
+                    type="button"
+                    aria-pressed={isActive}
                     onClick={() => setActive(c.id)}
                     whileTap={{ scale: 0.97 }}
                     whileHover={{ y: -1 }}
                     className={cn(
-                      "px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 sm:gap-2",
+                      "min-h-[44px] px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 sm:gap-2",
                       isActive
                         ? "bg-ink-900 text-white shadow-card"
                         : "bg-white border border-ink-50 text-ink-700 hover:border-ink-100"
@@ -55,6 +57,7 @@ export function CoatingScreen() {
                     {c.label}
                     {isPicked && (
                       <span
+                        aria-hidden="true"
                         className={cn(
                           "w-1.5 h-1.5 rounded-full",
                           isActive ? "bg-accent-mint" : "bg-brand"
@@ -75,22 +78,26 @@ export function CoatingScreen() {
             transition={{ duration: 0.3 }}
             className="p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-card"
           >
-            <div className="text-xs sm:text-sm text-brand font-bold tracking-wider uppercase">
-              {info.label}
-            </div>
-            <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
-              {info.tagline}
-            </div>
-            <p className="mt-2 sm:mt-3 text-sm sm:text-base text-ink-500 leading-relaxed">{info.description}</p>
-
-            <div className="mt-4 sm:mt-5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-muted">
-              <div className="text-[11px] sm:text-xs uppercase tracking-wider text-ink-400 font-semibold">
-                이런 분께 잘 맞아요
+            <div role="status" aria-live="polite" aria-atomic="true">
+              <div className="text-xs sm:text-sm text-brand font-bold tracking-wider uppercase">
+                {info.label}
               </div>
-              <div className="mt-1 text-sm sm:text-base text-ink-900 font-medium leading-snug">{info.scenario}</div>
+              <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
+                {info.tagline}
+              </div>
+              <p className="mt-2 sm:mt-3 text-sm sm:text-base text-ink-500 leading-relaxed">{info.description}</p>
+
+              <div className="mt-4 sm:mt-5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-bg-muted">
+                <div className="text-[11px] sm:text-xs uppercase tracking-wider text-ink-400 font-semibold">
+                  이런 분께 잘 맞아요
+                </div>
+                <div className="mt-1 text-sm sm:text-base text-ink-900 font-medium leading-snug">{info.scenario}</div>
+              </div>
             </div>
 
             <button
+              type="button"
+              aria-pressed={isApplied}
               onClick={() => toggleCoating(active)}
               className={cn(
                 "mt-5 sm:mt-6 w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold tracking-tight transition-all flex items-center justify-center gap-2",
@@ -101,7 +108,13 @@ export function CoatingScreen() {
             >
               {isApplied ? (
                 <>
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <svg
+                    aria-hidden="true"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                  >
                     <path
                       d="M4 10l4 4 8-8"
                       stroke="currentColor"
@@ -117,7 +130,7 @@ export function CoatingScreen() {
               )}
             </button>
 
-            <div className="mt-2.5 sm:mt-3 text-[11px] sm:text-xs text-ink-300 text-center leading-snug">
+            <div className="mt-2.5 sm:mt-3 text-[11px] sm:text-xs text-ink-400 text-center leading-snug">
               {coatings.length}개 코팅 선택됨 · 결과 화면에서 직원이 한눈에 확인합니다
             </div>
           </motion.div>

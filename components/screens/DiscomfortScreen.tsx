@@ -13,7 +13,7 @@ export function DiscomfortScreen() {
   const setPrimary = useWizard((s) => s.setPrimaryConcern);
 
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
+    <div className="h-full overflow-y-auto overscroll-contain px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-6xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 2"
@@ -43,13 +43,18 @@ export function DiscomfortScreen() {
         <AnimatePresence>
           {discomforts.length > 0 && (
             <motion.div
+              role="region"
+              aria-label="가장 신경쓰이는 항목 선택"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
               className="mt-5 sm:mt-8 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-ink-900 text-white shadow-elevated"
             >
               <div className="flex items-start gap-3 sm:gap-4">
-                <div className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/10 grid place-items-center">
+                <div
+                  aria-hidden="true"
+                  className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/10 grid place-items-center"
+                >
                   <span className="text-lg sm:text-xl">⭐</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -68,15 +73,17 @@ export function DiscomfortScreen() {
                   return (
                     <motion.button
                       key={id}
+                      type="button"
+                      aria-pressed={active}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => setPrimary(id)}
-                      className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 sm:gap-2 ${
+                      className={`min-h-[44px] px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 sm:gap-2 ${
                         active
                           ? "bg-white text-ink-900"
                           : "bg-white/10 text-white/80 hover:bg-white/15"
                       }`}
                     >
-                      <span>{d.emoji}</span>
+                      <span aria-hidden="true">{d.emoji}</span>
                       {d.label}
                     </motion.button>
                   );

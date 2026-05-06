@@ -25,7 +25,7 @@ export function PurposeScreen() {
   );
 
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
+    <div className="h-full overflow-y-auto overscroll-contain px-4 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-6xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 1"
@@ -57,7 +57,10 @@ export function PurposeScreen() {
           animate={{ opacity: hints.length ? 1 : 0.5 }}
           className="mt-5 sm:mt-8 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-soft flex items-center gap-3 sm:gap-4"
         >
-          <div className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-soft text-brand grid place-items-center">
+          <div
+            aria-hidden="true"
+            className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-soft text-brand grid place-items-center"
+          >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <path
                 d="M10 2v2m0 12v2M2 10h2m12 0h2M4.2 4.2l1.4 1.4m8.8 8.8l1.4 1.4M4.2 15.8l1.4-1.4m8.8-8.8l1.4-1.4"
@@ -72,7 +75,17 @@ export function PurposeScreen() {
             <div className="text-[11px] sm:text-xs text-ink-400 font-semibold tracking-wider uppercase">
               관련 옵션 키워드
             </div>
-            <div className="mt-1 sm:mt-1.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-label={
+                hints.length > 0
+                  ? `관련 옵션 키워드: ${hints.join(", ")}`
+                  : "선택할수록 관련 키워드가 여기에 떠요"
+              }
+              className="mt-1 sm:mt-1.5 flex flex-wrap items-center gap-1.5 sm:gap-2"
+            >
               <AnimatePresence mode="popLayout">
                 {hints.length === 0 && (
                   <motion.span
@@ -80,7 +93,7 @@ export function PurposeScreen() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-xs sm:text-sm text-ink-300"
+                    className="text-xs sm:text-sm text-ink-400"
                   >
                     선택할수록 관련 키워드가 여기에 떠요
                   </motion.span>
@@ -102,10 +115,10 @@ export function PurposeScreen() {
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-[10px] sm:text-xs text-ink-300 uppercase tracking-wider">선택</div>
+            <div className="text-[10px] sm:text-xs text-ink-400 uppercase tracking-wider">선택</div>
             <div className="text-lg sm:text-xl font-bold text-ink-900 font-num leading-tight">
               {purposes.length}
-              <span className="text-ink-300 text-sm sm:text-base font-medium"> / {PURPOSES.length}</span>
+              <span className="text-ink-400 text-sm sm:text-base font-medium"> / {PURPOSES.length}</span>
             </div>
           </div>
         </motion.div>

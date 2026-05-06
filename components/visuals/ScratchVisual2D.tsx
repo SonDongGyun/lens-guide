@@ -126,10 +126,12 @@ export function ScratchVisual2D() {
                 return (
                   <motion.button
                     key={id}
+                    type="button"
+                    aria-pressed={active}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => setSelection({ kind: "scenario", id })}
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
+                      "min-h-[44px] px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
                       active
                         ? "bg-ink-900 text-white border-ink-900"
                         : "bg-white text-ink-600 border-ink-100 hover:border-ink-300"
@@ -162,8 +164,27 @@ function ScratchDiagram({
   const dimHardcoat = activeLayer !== "hardcoat";
   const dimSubstrate = activeLayer !== "substrate";
 
+  // Keyboard activation for the SVG layer pickers. Native onClick covers
+  // pointer + Enter on focusable elements in some browsers, but Space
+  // and a few SR-key interactions require an explicit handler. Mirroring
+  // the standard button keydown behavior keeps the diagram operable
+  // without a real <button>, which would force a layout we don't want.
+  const handleKey =
+    (id: LayerId) => (e: React.KeyboardEvent<SVGGElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onSelectLayer(id);
+      }
+    };
+
   return (
-    <svg viewBox="0 0 420 280" className="w-full max-w-[420px] h-auto">
+    <svg
+      viewBox="0 0 420 280"
+      className="w-full max-w-[420px] h-auto"
+      role="img"
+      aria-label="렌즈 단면도. 표면 외층, 하드코트, 렌즈 본체 3겹 구조."
+    >
+      <title>렌즈 단면도: 표면 외층 · 하드코트 · 렌즈 본체 3겹 구조</title>
       <defs>
         <linearGradient id="substrate-grad-2d" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#D6E1F2" />
@@ -172,8 +193,14 @@ function ScratchDiagram({
       </defs>
 
       <g
+        role="button"
+        tabIndex={0}
+        aria-label={SCRATCH_LAYERS.substrate.name}
+        aria-pressed={activeLayer === "substrate"}
         onClick={() => onSelectLayer("substrate")}
+        onKeyDown={handleKey("substrate")}
         style={{ cursor: "pointer" }}
+        className="focus:outline-none"
       >
         <rect
           x="40"
@@ -189,8 +216,14 @@ function ScratchDiagram({
       </g>
 
       <g
+        role="button"
+        tabIndex={0}
+        aria-label={SCRATCH_LAYERS.hardcoat.name}
+        aria-pressed={activeLayer === "hardcoat"}
         onClick={() => onSelectLayer("hardcoat")}
+        onKeyDown={handleKey("hardcoat")}
         style={{ cursor: "pointer" }}
+        className="focus:outline-none"
       >
         <path
           d="M40 118 Q 40 90 95 90 L 325 90 Q 380 90 380 118 Z"
@@ -202,8 +235,14 @@ function ScratchDiagram({
       </g>
 
       <g
+        role="button"
+        tabIndex={0}
+        aria-label={SCRATCH_LAYERS.surface.name}
+        aria-pressed={activeLayer === "surface"}
         onClick={() => onSelectLayer("surface")}
+        onKeyDown={handleKey("surface")}
         style={{ cursor: "pointer" }}
+        className="focus:outline-none"
       >
         <rect x="40" y="68" width="340" height="26" fill="transparent" />
         <path

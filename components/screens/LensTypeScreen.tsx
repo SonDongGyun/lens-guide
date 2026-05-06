@@ -37,7 +37,7 @@ export function LensTypeScreen() {
   }, [lensType, singleTarget, info.zones]);
 
   return (
-    <div className="h-full overflow-y-auto px-5 sm:px-8 lg:px-20 pb-8 sm:pb-10">
+    <div className="h-full overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-20 pb-8 sm:pb-10">
       <div className="max-w-7xl mx-auto pt-4">
         <SectionTitle
           eyebrow="STEP 3"
@@ -56,10 +56,12 @@ export function LensTypeScreen() {
             return (
               <motion.button
                 key={t.id}
+                type="button"
+                aria-pressed={active}
                 onClick={() => setLensType(t.id)}
                 whileTap={{ scale: 0.97 }}
                 className={cn(
-                  "relative flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-colors whitespace-nowrap",
+                  "relative flex-1 sm:flex-none min-h-[44px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-colors whitespace-nowrap",
                   active ? "text-ink-900" : "text-ink-400"
                 )}
               >
@@ -93,10 +95,12 @@ export function LensTypeScreen() {
                 return (
                   <motion.button
                     key={t.id}
+                    type="button"
+                    aria-pressed={active}
                     onClick={() => setSingleTarget(t.id)}
                     whileTap={{ scale: 0.97 }}
                     className={cn(
-                      "relative flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm font-semibold transition-colors text-left",
+                      "relative flex-1 sm:flex-none min-h-[44px] px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm font-semibold transition-colors text-left",
                       active ? "text-ink-900" : "text-ink-400"
                     )}
                   >
@@ -128,6 +132,9 @@ export function LensTypeScreen() {
           {/* info card */}
           <motion.div
             key={info.id}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
@@ -171,7 +178,7 @@ export function LensTypeScreen() {
                     <div
                       className={cn(
                         "mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-bold",
-                        v ? "text-brand-dark" : "text-ink-300"
+                        v ? "text-brand-dark" : "text-ink-400"
                       )}
                     >
                       {v ? "편함" : "흐림"}

@@ -3,27 +3,6 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface Props {
-  children: React.ReactNode;
-  direction?: 1 | -1;
-  className?: string;
-}
-
-export function ScreenShell({ children, direction = 1, className }: Props) {
-  return (
-    <motion.div
-      key="screen"
-      initial={{ opacity: 0, x: direction === 1 ? 40 : -40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: direction === 1 ? -40 : 40 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={cn("absolute inset-0 flex flex-col", className)}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 interface SectionTitleProps {
   eyebrow?: string;
   title: string | React.ReactNode;
