@@ -42,8 +42,6 @@ const SCREEN_LABELS: Record<ScreenId, string> = {
 };
 
 export default function Page() {
-  useKioskGuards();
-
   // Manual rehydrate so SSR markup and client first render agree.
   // The store is configured with skipHydration; this effect runs the
   // restore after first paint, producing a one-time jump to the
@@ -58,6 +56,8 @@ export default function Page() {
   const prev = useWizard((s) => s.prev);
   const purposes = useWizard((s) => s.purposes);
   const discomforts = useWizard((s) => s.discomforts);
+
+  useKioskGuards({ screen, welcomeScreen: "welcome", prev });
 
   const ActiveScreen = SCREENS[screen];
 

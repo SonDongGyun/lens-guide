@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useWizard, type ScreenId } from "./store";
 
 /**
  * Decide what the popstate handler should do given the current state.
@@ -17,10 +16,10 @@ import { useWizard, type ScreenId } from "./store";
 export type PopAction = "consume-guard" | "exit-welcome" | "go-prev";
 export function decidePopAction(
   popGuardActive: boolean,
-  screen: ScreenId
+  isWelcome: boolean
 ): PopAction {
   if (popGuardActive) return "consume-guard";
-  if (screen === "welcome") return "exit-welcome";
+  if (isWelcome) return "exit-welcome";
   return "go-prev";
 }
 
@@ -46,16 +45,28 @@ export type SyncAction =
   | "push-new"
   | "no-op";
 export function decideSyncAction(
-  screen: ScreenId,
+  isWelcome: boolean,
   sentinelLocallySet: boolean,
   historyEntryIsSentinel: boolean
 ): SyncAction {
-  if (screen === "welcome") {
+  if (isWelcome) {
     return sentinelLocallySet ? "consume-leftover" : "no-op";
   }
   if (sentinelLocallySet) return "no-op";
   if (historyEntryIsSentinel) return "claim-existing";
   return "push-new";
+}
+
+interface KioskGuardsArgs {
+  /** Current wizard screen id (subscribed by the caller). */
+  screen: string;
+  /** The id that represents the entry/exit screen — backstop for
+   *  history sentinel management. Different wizards use different
+   *  literal types, so we accept any string. */
+  welcomeScreen: string;
+  /** Step-back action invoked when the user presses the system back
+   *  button on a non-welcome screen. */
+  prev: () => void;
 }
 
 /**
@@ -70,17 +81,24 @@ export function decideSyncAction(
  * them would punish exactly the patient reading we want to encourage.
  * Cross-session resume is now covered by zustand persist (24h TTL).
  *
- * The hook keeps its name for the file's external surface but no
- * longer enforces "kiosk" semantics — see useWizard's persist config
- * and the Welcome screen for the new pre-visit framing.
+ * The hook is wizard-agnostic: callers pass in their store's
+ * subscribed screen value, the welcome-screen literal, and a prev
+ * callback. This lets a single implementation back both the
+ * eyeglass and contact-lens flows without code drift.
  */
-export function useKioskGuards() {
-  const screen = useWizard((s) => s.screen);
+export function useKioskGuards({ screen, welcomeScreen, prev }: KioskGuardsArgs) {
   const sentinelRef = useRef(false);
   // Set to true right before we synthetically pop our own sentinel so
   // the popstate handler can tell user-initiated back from our own
   // cleanup pop and skip prev() in the latter case.
   const popGuardRef = useRef(false);
+
+  // Stash latest args so the popstate handler — attached once on
+  // mount — always reads fresh values across re-renders.
+  const argsRef = useRef({ screen, welcomeScreen, prev });
+  useEffect(() => {
+    argsRef.current = { screen, welcomeScreen, prev };
+  });
 
   // Always-attached popstate listener so welcome ↔ non-welcome
   // transitions never miss an event. The sync effect below manages
@@ -89,10 +107,8 @@ export function useKioskGuards() {
     if (typeof window === "undefined") return;
 
     const onPop = () => {
-      const action = decidePopAction(
-        popGuardRef.current,
-        useWizard.getState().screen
-      );
+      const { screen: cur, welcomeScreen: w, prev: doPrev } = argsRef.current;
+      const action = decidePopAction(popGuardRef.current, cur === w);
       switch (action) {
         case "consume-guard":
           popGuardRef.current = false;
@@ -102,7 +118,7 @@ export function useKioskGuards() {
           return;
         case "go-prev":
           sentinelRef.current = false;
-          useWizard.getState().prev();
+          doPrev();
           return;
       }
     };
@@ -119,7 +135,7 @@ export function useKioskGuards() {
 
     const cur = window.history.state as { wizard?: boolean } | null;
     const action = decideSyncAction(
-      screen,
+      screen === welcomeScreen,
       sentinelRef.current,
       !!(cur && cur.wizard === true)
     );
@@ -140,5 +156,5 @@ export function useKioskGuards() {
       case "no-op":
         return;
     }
-  }, [screen]);
+  }, [screen, welcomeScreen]);
 }
