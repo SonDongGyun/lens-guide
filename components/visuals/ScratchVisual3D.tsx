@@ -22,6 +22,7 @@ import {
   type Spark,
   type Stroke,
 } from "./scratch/types";
+import { drawScratches, drawSparks } from "./scratch/painter";
 
 // Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
 // uncoated lens on the left accumulates real grooves; the coated lens
@@ -426,117 +427,10 @@ function Lens({
       (s) => now - s.bornAt < SPARK_LIFE
     );
 
-    // --- Left lens (scratches) ---
-    const sctx = scratchCanvas.getContext("2d");
-    if (sctx) {
-      sctx.clearRect(0, 0, TEX_W, TEX_H);
-      sctx.fillStyle = "rgba(252,165,165,0.07)";
-      sctx.fillRect(0, 0, TEX_W, TEX_H);
-
-      sctx.lineCap = "round";
-      sctx.lineJoin = "round";
-      for (const stroke of strokesRef.current) {
-        if (stroke.points.length === 0) continue;
-        // Single-point stroke (a tap with no drag) — Canvas2D's `stroke`
-        // on a path that only has `moveTo` draws nothing, so a tap used
-        // to silently disappear. Render it as a small impact divot.
-        if (stroke.points.length === 1) {
-          const p = stroke.points[0];
-          sctx.fillStyle = "rgba(15,23,42,0.18)";
-          sctx.beginPath();
-          sctx.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
-          sctx.fill();
-          sctx.fillStyle = "rgba(15,23,42,0.95)";
-          sctx.beginPath();
-          sctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2);
-          sctx.fill();
-          sctx.fillStyle = "rgba(255,255,255,0.75)";
-          sctx.beginPath();
-          sctx.arc(p.x - 0.9, p.y - 0.9, 0.9, 0, Math.PI * 2);
-          sctx.fill();
-          continue;
-        }
-        // Soft outer halo — like the lens micro-fracture haze around
-        // a deep groove. Drawn first so the dark groove sits on top.
-        sctx.strokeStyle = "rgba(15,23,42,0.18)";
-        sctx.lineWidth = 8;
-        sctx.beginPath();
-        stroke.points.forEach((p, i) => {
-          if (i === 0) sctx.moveTo(p.x, p.y);
-          else sctx.lineTo(p.x, p.y);
-        });
-        sctx.stroke();
-        // Main groove — much darker and wider than before so it reads
-        // through the translucent substrate instead of disappearing.
-        sctx.strokeStyle = "rgba(15,23,42,0.95)";
-        sctx.lineWidth = 4;
-        sctx.beginPath();
-        stroke.points.forEach((p, i) => {
-          if (i === 0) sctx.moveTo(p.x, p.y);
-          else sctx.lineTo(p.x, p.y);
-        });
-        sctx.stroke();
-        // Bright sliver above the groove for cut-glass feel.
-        sctx.strokeStyle = "rgba(255,255,255,0.7)";
-        sctx.lineWidth = 1.2;
-        sctx.beginPath();
-        stroke.points.forEach((p, i) => {
-          if (i === 0) sctx.moveTo(p.x - 1.2, p.y - 1.2);
-          else sctx.lineTo(p.x - 1.2, p.y - 1.2);
-        });
-        sctx.stroke();
-      }
+    if (drawScratches(scratchCanvas, strokesRef.current)) {
       scratchTexture.needsUpdate = true;
     }
-
-    // --- Right lens (sparks/shield) ---
-    const pctx = sparkCanvas.getContext("2d");
-    if (pctx) {
-      pctx.clearRect(0, 0, TEX_W, TEX_H);
-      pctx.fillStyle = "rgba(110,231,183,0.07)";
-      pctx.fillRect(0, 0, TEX_W, TEX_H);
-
-      for (const spark of sparksRef.current) {
-        const age = Math.max(0, Math.min(1, (now - spark.bornAt) / SPARK_LIFE));
-        const alpha = 1 - age;
-        const radius = Math.max(0.5, 18 + age * 30);
-
-        const grad = pctx.createRadialGradient(
-          spark.x,
-          spark.y,
-          0,
-          spark.x,
-          spark.y,
-          radius
-        );
-        grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-        grad.addColorStop(0.35, `rgba(167,243,208,${alpha * 0.7})`);
-        grad.addColorStop(1, "rgba(167,243,208,0)");
-        pctx.fillStyle = grad;
-        pctx.fillRect(
-          spark.x - radius,
-          spark.y - radius,
-          radius * 2,
-          radius * 2
-        );
-
-        pctx.strokeStyle = `rgba(34,197,94,${alpha * 0.7})`;
-        pctx.lineWidth = 2;
-        pctx.beginPath();
-        pctx.arc(spark.x, spark.y, radius * 0.85, 0, Math.PI * 2);
-        pctx.stroke();
-
-        for (let i = 0; i < 4; i++) {
-          const angle = (i / 4) * Math.PI * 2 + age * 4;
-          const r = radius * (0.6 + age * 0.5);
-          const sx = spark.x + Math.cos(angle) * r;
-          const sy = spark.y + Math.sin(angle) * r;
-          pctx.fillStyle = `rgba(255,255,255,${alpha * 0.9})`;
-          pctx.beginPath();
-          pctx.arc(sx, sy, 1.6, 0, Math.PI * 2);
-          pctx.fill();
-        }
-      }
+    if (drawSparks(sparkCanvas, sparksRef.current, now)) {
       sparkTexture.needsUpdate = true;
     }
   });
