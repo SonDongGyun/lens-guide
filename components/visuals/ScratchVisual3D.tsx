@@ -23,6 +23,7 @@ import {
   type Stroke,
 } from "./scratch/types";
 import { drawScratches, drawSparks } from "./scratch/painter";
+import { useScratchTextures } from "./scratch/useScratchTextures";
 
 // Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
 // uncoated lens on the left accumulates real grooves; the coated lens
@@ -183,34 +184,6 @@ function Lens({
     onProtectStartRef.current = onProtectStart;
   });
 
-  // Two independent canvas-backed textures — one per lens. Keeping
-  // them split means the uncoated lens never has to know about sparks
-  // and the coated lens never has to know about scratches.
-  const {
-    scratchCanvas,
-    scratchTexture,
-    sparkCanvas,
-    sparkTexture,
-  } = useMemo(() => {
-    const make = () => {
-      const c = document.createElement("canvas");
-      c.width = TEX_W;
-      c.height = TEX_H;
-      const t = new THREE.CanvasTexture(c);
-      t.minFilter = THREE.LinearFilter;
-      t.magFilter = THREE.LinearFilter;
-      return { c, t };
-    };
-    const left = make();
-    const right = make();
-    return {
-      scratchCanvas: left.c,
-      scratchTexture: left.t,
-      sparkCanvas: right.c,
-      sparkTexture: right.t,
-    };
-  }, []);
-
   const lensShape = useMemo(() => {
     const shape = new THREE.Shape();
     shape.absellipse(0, 0, LENS_W, LENS_H, 0, Math.PI * 2, false, 0);
@@ -247,30 +220,14 @@ function Lens({
     return outer;
   }, []);
 
-  const buildPaintGeometry = (shape: THREE.Shape) => {
-    const geo = new THREE.ShapeGeometry(shape, 64);
-    const positions = geo.attributes.position;
-    const uvs = geo.attributes.uv;
-    for (let i = 0; i < positions.count; i++) {
-      const x = positions.getX(i);
-      const y = positions.getY(i);
-      uvs.setXY(i, (x + LENS_W) / (LENS_W * 2), (y + LENS_H) / (LENS_H * 2));
-    }
-    uvs.needsUpdate = true;
-    return geo;
-  };
-
-  const leftPaintGeo = useMemo(() => buildPaintGeometry(lensShape), [lensShape]);
-  const rightPaintGeo = useMemo(() => buildPaintGeometry(lensShape), [lensShape]);
-
-  useEffect(() => {
-    return () => {
-      leftPaintGeo.dispose();
-      rightPaintGeo.dispose();
-      scratchTexture.dispose();
-      sparkTexture.dispose();
-    };
-  }, [leftPaintGeo, rightPaintGeo, scratchTexture, sparkTexture]);
+  const {
+    scratchCanvas,
+    scratchTexture,
+    sparkCanvas,
+    sparkTexture,
+    leftPaintGeo,
+    rightPaintGeo,
+  } = useScratchTextures(lensShape);
 
   useEffect(() => {
     strokesRef.current = [];
