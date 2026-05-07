@@ -6,6 +6,22 @@ import * as THREE from "three";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { KioskCanvas } from "./KioskCanvas";
+import {
+  COATING_Y,
+  LEFT_X,
+  LENS_H,
+  LENS_W,
+  MAX_POINTS_PER_STROKE,
+  MAX_STROKES,
+  MIN_STROKE_STEP_PX,
+  PAINT_Y,
+  RIGHT_X,
+  SPARK_LIFE,
+  TEX_H,
+  TEX_W,
+  type Spark,
+  type Stroke,
+} from "./scratch/types";
 
 // Side-by-side eyeglass scratch lab. Two real lens silhouettes — the
 // uncoated lens on the left accumulates real grooves; the coated lens
@@ -20,34 +36,6 @@ import { KioskCanvas } from "./KioskCanvas";
 // fires, `pointermove`/`pointerup` are tracked on `window` so they fire
 // even when the finger leaves the canvas, and we filter by pointerId so
 // multi-touch can't corrupt the active-gesture state.
-
-interface Stroke {
-  points: { x: number; y: number }[];
-}
-interface Spark {
-  x: number;
-  y: number;
-  bornAt: number;
-}
-
-const TEX_W = 720;
-const TEX_H = 800;
-const SPARK_LIFE = 0.75;
-const MAX_STROKES = 30;
-const MAX_POINTS_PER_STROKE = 250;
-const MIN_STROKE_STEP_PX = 3;
-
-const LENS_W = 1.8;
-const LENS_H = 2.0;
-const LEFT_X = -2.1;
-const RIGHT_X = 2.1;
-// Substrate is extruded (depth 0.26 + bevelThickness 0.04) and rotated so
-// its top face sits at world y ≈ 0.24. Paint must clear that top face or
-// it renders *inside* the substrate volume and gets z-occluded. Pointer
-// events also intersect this plane (see screenToLens) so the hit point
-// matches what the user sees, not where some invisible picker sits.
-const PAINT_Y = 0.28;
-const COATING_Y = 0.32;
 
 export function ScratchVisual3D() {
   const [scratchCount, setScratchCount] = useState(0);
