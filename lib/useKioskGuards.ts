@@ -1,7 +1,62 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useWizard } from "./store";
+import { useWizard, type ScreenId } from "./store";
+
+/**
+ * Decide what the popstate handler should do given the current state.
+ * Pure function so the rules can be exercised without a DOM.
+ *
+ *  - consume-guard:   we just synthesized our own back() — clear flags
+ *                     and stop, the navigation has already settled.
+ *  - exit-welcome:    no sentinel is supposed to be active on welcome,
+ *                     let the back gesture exit the page.
+ *  - go-prev:         user-initiated back on a non-welcome screen,
+ *                     map it to wizard.prev().
+ */
+export type PopAction = "consume-guard" | "exit-welcome" | "go-prev";
+export function decidePopAction(
+  popGuardActive: boolean,
+  screen: ScreenId
+): PopAction {
+  if (popGuardActive) return "consume-guard";
+  if (screen === "welcome") return "exit-welcome";
+  return "go-prev";
+}
+
+/**
+ * Decide what the screen-sync effect should do given the current
+ * (screen, sentinel) state. Welcome holds zero sentinels; non-welcome
+ * holds exactly one.
+ *
+ *  - consume-leftover:  arrived at welcome via the in-app footer with
+ *                       a sentinel still on the stack — pop it via
+ *                       history.back() guarded by popGuard.
+ *  - claim-existing:    refresh preserved our pushState entry; we
+ *                       just need to remember we already own it.
+ *  - push-new:          first time arriving on a non-welcome screen
+ *                       (or after consuming the previous one) — push
+ *                       a fresh sentinel.
+ *  - no-op:             welcome with no sentinel, or non-welcome
+ *                       with the sentinel already locally tracked.
+ */
+export type SyncAction =
+  | "consume-leftover"
+  | "claim-existing"
+  | "push-new"
+  | "no-op";
+export function decideSyncAction(
+  screen: ScreenId,
+  sentinelLocallySet: boolean,
+  historyEntryIsSentinel: boolean
+): SyncAction {
+  if (screen === "welcome") {
+    return sentinelLocallySet ? "consume-leftover" : "no-op";
+  }
+  if (sentinelLocallySet) return "no-op";
+  if (historyEntryIsSentinel) return "claim-existing";
+  return "push-new";
+}
 
 /**
  * Wires history-back interception so the system back gesture maps
@@ -34,18 +89,22 @@ export function useKioskGuards() {
     if (typeof window === "undefined") return;
 
     const onPop = () => {
-      if (popGuardRef.current) {
-        popGuardRef.current = false;
-        sentinelRef.current = false;
-        return;
+      const action = decidePopAction(
+        popGuardRef.current,
+        useWizard.getState().screen
+      );
+      switch (action) {
+        case "consume-guard":
+          popGuardRef.current = false;
+          sentinelRef.current = false;
+          return;
+        case "exit-welcome":
+          return;
+        case "go-prev":
+          sentinelRef.current = false;
+          useWizard.getState().prev();
+          return;
       }
-      if (useWizard.getState().screen === "welcome") {
-        // No sentinel is supposed to be active on welcome; let the
-        // navigation propagate so back exits the page.
-        return;
-      }
-      sentinelRef.current = false;
-      useWizard.getState().prev();
     };
 
     window.addEventListener("popstate", onPop);
@@ -53,33 +112,33 @@ export function useKioskGuards() {
   }, []);
 
   // Keep the sentinel state aligned with the current wizard screen.
-  //  - welcome      → no sentinel (single back press exits the page)
-  //  - non-welcome  → exactly one sentinel on top of history
-  //
-  // When transitioning back to welcome from a non-welcome screen via
-  // the in-app footer ("이전"), there is a leftover sentinel we
-  // pushed earlier. We consume it via history.back() guarded with
-  // popGuardRef so the popstate handler doesn't run prev() again.
+  // The decision rule lives in decideSyncAction; this effect just
+  // dispatches its result.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (screen === "welcome") {
-      if (sentinelRef.current) {
+    const cur = window.history.state as { wizard?: boolean } | null;
+    const action = decideSyncAction(
+      screen,
+      sentinelRef.current,
+      !!(cur && cur.wizard === true)
+    );
+
+    switch (action) {
+      case "consume-leftover":
         popGuardRef.current = true;
         window.history.back();
-        // sentinelRef will be cleared by the popGuard branch in onPop.
-      }
-      return;
+        // sentinelRef will be cleared by the consume-guard branch in onPop.
+        return;
+      case "claim-existing":
+        sentinelRef.current = true;
+        return;
+      case "push-new":
+        window.history.pushState({ wizard: true }, "", window.location.href);
+        sentinelRef.current = true;
+        return;
+      case "no-op":
+        return;
     }
-
-    // If the current history entry is already our sentinel — for
-    // example, after a page refresh that preserved our pushed entry —
-    // don't double-push. Just claim it.
-    const cur = window.history.state as { wizard?: boolean } | null;
-    const alreadySentinel = !!(cur && cur.wizard === true);
-    if (!sentinelRef.current && !alreadySentinel) {
-      window.history.pushState({ wizard: true }, "", window.location.href);
-    }
-    sentinelRef.current = true;
   }, [screen]);
 }
