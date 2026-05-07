@@ -1,11 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import {
-  persist,
-  type PersistStorage,
-  type StorageValue,
-} from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import type {
   PurposeId,
   DiscomfortId,
@@ -78,7 +74,7 @@ const initialState = {
   coatings: [] as CoatingId[],
 };
 
-const STORAGE_KEY = "lens-guide:wizard:v1";
+const STORAGE_KEY = "lens-guide:wizard:v2";
 const TTL_MS = 24 * 60 * 60 * 1000; // 24h: a realistic pre-visit window
 
 // Pre-visit mobile users may finish the wizard hours later (commute,
@@ -86,8 +82,13 @@ const TTL_MS = 24 * 60 * 60 * 1000; // 24h: a realistic pre-visit window
 // to resume — but anything older than 24h is almost certainly a
 // different intent, so we drop it and start fresh.
 //
-// We wrap zustand's StorageValue with our own { timestamp, value }
-// envelope so the TTL check is independent of the persisted schema.
+// TTL is encoded *inside* the persisted slice as `lastUpdatedAt`,
+// stamped by partialize on every set. On rehydrate, `merge` checks
+// the age and discards the slice if stale, falling back to the
+// initial state. The storage key was bumped from :v1 to :v2 because
+// the previous implementation wrapped values in a `{ timestamp, value }`
+// envelope that zustand's default storage cannot parse — old keys are
+// effectively orphaned, which is fine for a 24h-TTL wizard.
 type PersistedSlice = Pick<
   WizardState,
   | "screen"
@@ -100,52 +101,7 @@ type PersistedSlice = Pick<
   | "selectedIndex"
   | "prescription"
   | "coatings"
->;
-
-interface TtlEnvelope {
-  timestamp: number;
-  value: StorageValue<PersistedSlice>;
-}
-
-const ttlStorage: PersistStorage<PersistedSlice> = {
-  getItem: (name) => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = window.localStorage.getItem(name);
-      if (!raw) return null;
-      const env = JSON.parse(raw) as TtlEnvelope;
-      if (
-        !env ||
-        typeof env.timestamp !== "number" ||
-        Date.now() - env.timestamp > TTL_MS
-      ) {
-        window.localStorage.removeItem(name);
-        return null;
-      }
-      return env.value;
-    } catch {
-      return null;
-    }
-  },
-  setItem: (name, value) => {
-    if (typeof window === "undefined") return;
-    try {
-      const env: TtlEnvelope = { timestamp: Date.now(), value };
-      window.localStorage.setItem(name, JSON.stringify(env));
-    } catch {
-      // Quota / private mode — silently drop. The store still works
-      // in-memory; the user just loses cross-session resume.
-    }
-  },
-  removeItem: (name) => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.removeItem(name);
-    } catch {
-      /* ignore */
-    }
-  },
-};
+> & { lastUpdatedAt: number };
 
 export const useWizard = create<WizardState>()(
   persist(
@@ -196,21 +152,14 @@ export const useWizard = create<WizardState>()(
       reset: () => {
         set({ ...initialState });
         // reset() is the user's "처음으로" action. Clear the persisted
-        // envelope too so a tab close right after reset doesn't restore
+        // slice too so a tab close right after reset doesn't restore
         // stale data on next open.
-        if (typeof window !== "undefined") {
-          try {
-            window.localStorage.removeItem(STORAGE_KEY);
-          } catch {
-            /* ignore */
-          }
-        }
+        useWizard.persist.clearStorage();
       },
     }),
     {
       name: STORAGE_KEY,
-      storage: ttlStorage,
-      version: 1,
+      version: 2,
       // Rehydration runs on demand from a top-level useEffect rather
       // than at module load. Without this, sync localStorage rehydrate
       // races SSR: the server HTML reflects initial state, the client's
@@ -220,8 +169,10 @@ export const useWizard = create<WizardState>()(
       // after first paint, where it's expected.
       skipHydration: true,
       // direction is a transient animation hint; do not restore it.
-      // Functions are auto-skipped by persist.
-      partialize: (state) => ({
+      // Functions are auto-skipped by persist. lastUpdatedAt is the
+      // TTL stamp consumed by `merge` below; never read off the live
+      // store — it lives in storage, not in WizardState.
+      partialize: (state): PersistedSlice => ({
         screen: state.screen,
         ticket: state.ticket,
         purposes: state.purposes,
@@ -232,7 +183,22 @@ export const useWizard = create<WizardState>()(
         selectedIndex: state.selectedIndex,
         prescription: state.prescription,
         coatings: state.coatings,
+        lastUpdatedAt: Date.now(),
       }),
+      merge: (persisted, current) => {
+        const p = persisted as PersistedSlice | undefined;
+        if (
+          !p ||
+          typeof p.lastUpdatedAt !== "number" ||
+          Date.now() - p.lastUpdatedAt > TTL_MS
+        ) {
+          return current;
+        }
+        // Strip lastUpdatedAt so it doesn't leak onto live state — it's
+        // a storage-only field, not part of WizardState.
+        const { lastUpdatedAt: _ts, ...slice } = p;
+        return { ...current, ...slice };
+      },
     }
   )
 );
