@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useWizard, type ScreenId } from "@/lib/store";
 import { useKioskGuards } from "@/lib/useKioskGuards";
+import { useScreenChangeA11y } from "@/lib/useScreenChangeA11y";
 import { KioskFrame } from "@/components/ui/KioskFrame";
 import { WelcomeScreen } from "@/components/screens/WelcomeScreen";
 import { PurposeScreen } from "@/components/screens/PurposeScreen";
@@ -60,34 +61,8 @@ export default function Page() {
 
   const ActiveScreen = SCREENS[screen];
 
-  // Re-anchor focus to the new screen container on every transition so
-  // footer buttons don't retain focus across screen swaps. Callback ref
-  // is required here, not useEffect+useRef: AnimatePresence's mode="wait"
-  // keeps the *exiting* div mounted during the transition, so a `screen`-
-  // keyed effect would fire while the ref still pointed at the outgoing
-  // node. The callback fires when the new motion.div actually mounts —
-  // after the old one finishes its exit animation — so focus lands on
-  // the visible screen.
-  const setScreenContainer = useCallback((node: HTMLDivElement | null) => {
-    if (node) node.focus();
-  }, []);
-
-  // Visually-hidden live region for screen-reader announcements when the
-  // wizard step changes. Focus alone isn't always enough — the new
-  // container has tabIndex=-1 and no accessible name of its own (its
-  // first child is an h1 that AT may or may not auto-read on focus).
-  // Setting role=status + aria-live=polite on a stable, always-mounted
-  // node makes the change reliably announced. The ref-tracked mount
-  // skip avoids announcing the initial welcome screen on page load.
-  const [announcement, setAnnouncement] = useState("");
-  const didMountRef = useRef(false);
-  useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
-    setAnnouncement(SCREEN_LABELS[screen]);
-  }, [screen]);
+  const { containerRef: setScreenContainer, announcement } =
+    useScreenChangeA11y(screen, SCREEN_LABELS);
 
   // Footer behavior per screen
   const footer = (() => {
