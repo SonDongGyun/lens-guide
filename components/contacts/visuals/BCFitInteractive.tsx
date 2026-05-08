@@ -129,7 +129,7 @@ function StaticCase({
       <svg viewBox="0 0 60 36" className="w-full h-auto" aria-hidden="true">
         <path
           d={corneaPath}
-          stroke="#FFC9BB"
+          stroke="#D1D6DB"
           strokeWidth={4}
           fill="none"
           strokeLinecap="round"

@@ -229,8 +229,8 @@ function Cornea() {
   return (
     <mesh geometry={geom}>
       <meshStandardMaterial
-        color="#FFC9BB"
-        roughness={0.55}
+        color="#EEF2F8"
+        roughness={0.5}
         metalness={0.05}
         transparent
         opacity={0.96}
