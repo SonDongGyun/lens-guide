@@ -6,6 +6,7 @@ import { useContactsWizard } from "@/lib/contacts/store";
 import { REPLACEMENTS, type ReplacementId } from "@/lib/contacts/data";
 import { recommendContacts } from "@/lib/contacts/recommendation";
 import { SectionTitle } from "@/components/ui/ScreenShell";
+import { DepositTimelineVisual } from "@/components/contacts/visuals/DepositTimelineVisual";
 import { cn } from "@/lib/utils";
 
 const ORDER: ReplacementId[] = ["daily", "biweekly", "monthly"];
@@ -44,7 +45,19 @@ export function ReplacementCompareScreen() {
           desc="자주 교체할수록 위생적이지만 단가는 올라가요. 입력하신 패턴 기반 추천을 표시했어요."
         />
 
-        <div className="mt-6 sm:mt-10 grid gap-3 sm:gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="mt-5 sm:mt-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-soft overflow-hidden"
+        >
+          <DepositTimelineVisual />
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-ink-50 text-[11px] sm:text-xs text-ink-500 leading-relaxed">
+            <span className="font-semibold text-ink-700">1일</span>은 매일 새 렌즈로 침착물이 쌓일 시간이 없고, <span className="font-semibold text-ink-700">2주용</span>은 두 번에 걸쳐 누적·초기화됩니다. <span className="font-semibold text-ink-700">1개월용</span>은 후반부로 갈수록 단백질·지방 침착이 짙어져 시야와 착용감에 영향을 줄 수 있어요.
+          </div>
+        </motion.div>
+
+        <div className="mt-6 sm:mt-8 grid gap-3 sm:gap-4">
           {ORDER.map((id, i) => {
             const r = REPLACEMENTS[id];
             const isRecommended = rec.replacement === id;
