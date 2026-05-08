@@ -6,6 +6,7 @@ import { useContactsWizard } from "@/lib/contacts/store";
 import { MATERIALS, type MaterialId } from "@/lib/contacts/data";
 import { recommendContacts } from "@/lib/contacts/recommendation";
 import { SectionTitle } from "@/components/ui/ScreenShell";
+import { OxygenFlowVisual } from "@/components/contacts/visuals/OxygenFlowVisual";
 import { cn } from "@/lib/utils";
 
 const ORDER: MaterialId[] = ["silicone_hydrogel", "hydrogel"];
@@ -44,7 +45,19 @@ export function MaterialCompareScreen() {
           desc="두 재질을 나란히 보고 마음에 드는 쪽을 골라주세요. 입력하신 패턴에 맞춘 추천을 표시했어요."
         />
 
-        <div className="mt-6 sm:mt-10 grid md:grid-cols-2 gap-3 sm:gap-5">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="mt-5 sm:mt-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-soft overflow-hidden"
+        >
+          <OxygenFlowVisual />
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-ink-50 text-[11px] sm:text-xs text-ink-500 leading-relaxed">
+            <span className="font-semibold text-ink-700">실리콘 하이드로겔</span>은 산소투과도가 약 5–8배 높아 풀데이 착용에서도 각막에 산소가 충분히 도달해요. <span className="font-semibold text-ink-700">하이드로겔</span>은 함수율이 더 높아 첫 촉촉함이 강하지만, 산소량은 상대적으로 부족합니다.
+          </div>
+        </motion.div>
+
+        <div className="mt-6 sm:mt-8 grid md:grid-cols-2 gap-3 sm:gap-5">
           {ORDER.map((id, i) => {
             const m = MATERIALS[id];
             const isRecommended = rec.material === id;

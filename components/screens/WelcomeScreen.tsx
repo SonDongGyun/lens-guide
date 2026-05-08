@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useWizard } from "@/lib/store";
 import { HeroLens } from "@/components/visuals/HeroLens";
@@ -48,7 +49,7 @@ export function WelcomeScreen() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 flex-wrap"
           >
             <div
               aria-hidden="true"
@@ -60,8 +61,30 @@ export function WelcomeScreen() {
               LensGuide
             </span>
             <span className="ml-3 px-2.5 py-0.5 rounded-full bg-bg-muted text-xs font-semibold text-ink-500">
-              방문 전 안내
+              안경
             </span>
+            <Link
+              href="/contacts"
+              className="ml-auto px-3 py-1.5 rounded-full bg-white border border-ink-50 hover:border-brand hover:text-brand text-xs font-semibold text-ink-700 transition-colors flex items-center gap-1.5 min-h-[36px]"
+            >
+              <span aria-hidden="true">👁</span>
+              콘택트도 알아보기
+              <svg
+                aria-hidden="true"
+                width="12"
+                height="12"
+                viewBox="0 0 14 14"
+                fill="none"
+              >
+                <path
+                  d="M3 7h8m0 0L7.5 3.5M11 7l-3.5 3.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
           </motion.div>
         </div>
 
