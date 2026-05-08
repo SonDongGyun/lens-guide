@@ -13,6 +13,7 @@ import {
 } from "@/lib/contacts/data";
 import { recommendContacts } from "@/lib/contacts/recommendation";
 import { SectionTitle } from "@/components/ui/ScreenShell";
+import { BCFitInteractive } from "@/components/contacts/visuals/BCFitInteractive";
 
 export function ContactsResultScreen() {
   const wearPattern = useContactsWizard((s) => s.wearPattern);
@@ -162,6 +163,31 @@ export function ContactsResultScreen() {
             </ul>
           </motion.div>
         )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="mt-5 sm:mt-6 p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-white border border-ink-50 shadow-card"
+        >
+          <div className="flex items-center gap-3 mb-3 sm:mb-4">
+            <div
+              aria-hidden="true"
+              className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-soft text-brand grid place-items-center"
+            >
+              👁
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] sm:text-xs uppercase tracking-wider text-ink-400 font-semibold">
+                왜 매장 측정이 필요한가요?
+              </div>
+              <div className="text-sm sm:text-lg font-bold text-ink-900 leading-snug">
+                BC 슬라이더로 직접 만져보세요
+              </div>
+            </div>
+          </div>
+          <BCFitInteractive />
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
