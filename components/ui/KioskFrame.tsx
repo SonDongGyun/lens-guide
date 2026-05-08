@@ -2,31 +2,37 @@
 
 import { motion } from "framer-motion";
 import { Button } from "./Button";
-import { ProgressBar } from "./ProgressBar";
-import { useWizard } from "@/lib/store";
 
 interface Props {
   children: React.ReactNode;
   showFooter?: boolean;
   primary?: { label: string; onClick: () => void; disabled?: boolean };
   secondary?: { label: string; onClick: () => void };
+  // Optional progress slot rendered above the main content. Each
+  // wizard composes its own ProgressBar (or omits it on welcome/staff)
+  // so this shell stays store-agnostic.
+  progress?: React.ReactNode;
 }
 
-export function KioskFrame({ children, showFooter = true, primary, secondary }: Props) {
-  const screen = useWizard((s) => s.screen);
-
+export function KioskFrame({
+  children,
+  showFooter = true,
+  primary,
+  secondary,
+  progress,
+}: Props) {
   return (
     <div
       className="h-dvh w-screen flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
     >
-      {/* TOP: progress */}
-      {screen !== "welcome" && screen !== "staff" && (
+      {/* TOP: progress (only when parent provides one) */}
+      {progress && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="px-4 sm:px-8 lg:px-10 pt-5 sm:pt-8 pb-3 sm:pb-4"
         >
-          <ProgressBar current={screen} />
+          {progress}
         </motion.div>
       )}
 

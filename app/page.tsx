@@ -6,6 +6,7 @@ import { useWizard, type ScreenId } from "@/lib/store";
 import { useKioskGuards } from "@/lib/useKioskGuards";
 import { useScreenChangeA11y } from "@/lib/useScreenChangeA11y";
 import { KioskFrame } from "@/components/ui/KioskFrame";
+import { ProgressBar, type ProgressStep } from "@/components/ui/ProgressBar";
 import { WelcomeScreen } from "@/components/screens/WelcomeScreen";
 import { PurposeScreen } from "@/components/screens/PurposeScreen";
 import { DiscomfortScreen } from "@/components/screens/DiscomfortScreen";
@@ -40,6 +41,15 @@ const SCREEN_LABELS: Record<ScreenId, string> = {
   result: "결과 안내",
   staff: "직원 안내 화면",
 };
+
+const PROGRESS_STEPS: ProgressStep<ScreenId>[] = [
+  { id: "purpose", label: "사용 목적" },
+  { id: "discomfort", label: "불편 포인트" },
+  { id: "lens-type", label: "렌즈 타입" },
+  { id: "thickness", label: "두께 비교" },
+  { id: "coating", label: "코팅" },
+  { id: "result", label: "결과" },
+];
 
 export default function Page() {
   // Manual rehydrate so SSR markup and client first render agree.
@@ -96,6 +106,15 @@ export default function Page() {
     }
   })();
 
+  const progress =
+    screen === "welcome" || screen === "staff" ? null : (
+      <ProgressBar
+        steps={PROGRESS_STEPS}
+        current={screen}
+        title="내게 맞는 렌즈 찾기"
+      />
+    );
+
   return (
     // reducedMotion="user" makes all Framer Motion components honor the
     // OS-level prefers-reduced-motion setting. Transforms (slide/scale)
@@ -103,7 +122,11 @@ export default function Page() {
     // behavior for vestibular safety. Tailwind CSS animations
     // (animate-pulse, transition-*) are handled separately in globals.css.
     <MotionConfig reducedMotion="user">
-      <KioskFrame primary={footer?.primary} secondary={footer?.secondary}>
+      <KioskFrame
+        primary={footer?.primary}
+        secondary={footer?.secondary}
+        progress={progress}
+      >
         <AnimatePresence mode="wait" custom={direction} initial={false}>
           <motion.div
             ref={setScreenContainer}

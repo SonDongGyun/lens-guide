@@ -1,47 +1,52 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { SCREEN_ORDER, type ScreenId } from "@/lib/store";
 
-const VISIBLE_STEPS: { id: ScreenId; label: string }[] = [
-  { id: "purpose", label: "사용 목적" },
-  { id: "discomfort", label: "불편 포인트" },
-  { id: "lens-type", label: "렌즈 타입" },
-  { id: "thickness", label: "두께 비교" },
-  { id: "coating", label: "코팅" },
-  { id: "result", label: "결과" },
-];
-
-interface Props {
-  current: ScreenId;
+export interface ProgressStep<K extends string = string> {
+  id: K;
+  label: string;
 }
 
-export function ProgressBar({ current }: Props) {
-  if (current === "welcome" || current === "staff") return null;
+interface Props<K extends string = string> {
+  steps: ProgressStep<K>[];
+  current: K;
+  // Right-side label shown next to the bar on >=sm screens. Lets each
+  // wizard brand its progress (e.g. "내게 맞는 렌즈 찾기" vs
+  // "내게 맞는 콘택트 찾기") without coupling the bar to a specific store.
+  title?: string;
+}
 
-  const idx = VISIBLE_STEPS.findIndex((s) => s.id === current);
-  const progress = ((idx + 1) / VISIBLE_STEPS.length) * 100;
+export function ProgressBar<K extends string = string>({
+  steps,
+  current,
+  title,
+}: Props<K>) {
+  const idx = steps.findIndex((s) => s.id === current);
+  if (idx < 0) return null;
+  const progress = ((idx + 1) / steps.length) * 100;
 
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-2 sm:mb-3 gap-3">
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-w-0">
           <span className="font-num text-brand font-bold">{idx + 1}</span>
-          <span className="text-ink-400">/ {VISIBLE_STEPS.length}</span>
+          <span className="text-ink-400">/ {steps.length}</span>
           <span className="ml-1.5 sm:ml-2 text-ink-700 font-medium truncate">
-            {VISIBLE_STEPS[idx]?.label}
+            {steps[idx]?.label}
           </span>
         </div>
-        <div className="hidden sm:block text-xs text-ink-400 font-medium tracking-wider uppercase">
-          내게 맞는 렌즈 찾기
-        </div>
+        {title && (
+          <div className="hidden sm:block text-xs text-ink-400 font-medium tracking-wider uppercase">
+            {title}
+          </div>
+        )}
       </div>
       <div
         role="progressbar"
         aria-label="진행 단계"
         aria-valuenow={idx + 1}
         aria-valuemin={1}
-        aria-valuemax={VISIBLE_STEPS.length}
+        aria-valuemax={steps.length}
         className="relative h-1.5 w-full rounded-full bg-ink-50 overflow-hidden"
       >
         <motion.div
@@ -58,5 +63,3 @@ export function ProgressBar({ current }: Props) {
     </div>
   );
 }
-
-export { SCREEN_ORDER };
