@@ -226,16 +226,47 @@ function Cornea() {
   }, []);
   useEffect(() => () => geom.dispose(), [geom]);
 
+  // Sclera + iris + pupil sit underneath the cornea so the dome
+  // reads as an actual eye, not a generic shape. The cornea itself
+  // is rendered nearly transparent (it's clear in real life), so
+  // what the user "sees" through it is the iris ring and pupil.
   return (
-    <mesh geometry={geom}>
-      <meshStandardMaterial
-        color="#EEF2F8"
-        roughness={0.5}
-        metalness={0.05}
-        transparent
-        opacity={0.96}
-      />
-    </mesh>
+    <group>
+      {/* sclera — flat white extending past the cornea rim. Sits just
+          below the rim (y ≈ -5.93) so the dome reads as raised over
+          the white, not poking through it. */}
+      <mesh position={[0, -6.0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[14, 64]} />
+        <meshStandardMaterial color="#F4F6FA" roughness={0.7} />
+      </mesh>
+      {/* iris — Korean-typical dark warm ring */}
+      <mesh position={[0, -2.6, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.5, 4.6, 96]} />
+        <meshStandardMaterial color="#5C4636" roughness={0.55} />
+      </mesh>
+      {/* iris darker outer limbus, just inside the cornea rim */}
+      <mesh position={[0, -2.55, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[4.55, 4.85, 96]} />
+        <meshStandardMaterial color="#2C2018" roughness={0.6} />
+      </mesh>
+      {/* pupil — black at center */}
+      <mesh position={[0, -2.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.5, 64]} />
+        <meshStandardMaterial color="#06080F" roughness={0.4} />
+      </mesh>
+      {/* cornea — translucent glass dome over the iris/pupil */}
+      <mesh geometry={geom}>
+        <meshStandardMaterial
+          color="#FFFFFF"
+          roughness={0.12}
+          metalness={0.15}
+          transparent
+          opacity={0.28}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
